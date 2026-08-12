@@ -96,6 +96,28 @@ export const en: MessageTree = {
     loading: 'Loading chart…',
   },
   collapsible: { toggle: 'Expand / collapse' },
+  research: {
+    title: '🔬 Equity Research (Serenity)',
+    disclaimer:
+      'Research support only, no trade execution. Static notes, refreshed by hand — ask Claude to re-run serenity-skill for current evidence.',
+    chainPosition: 'Chain position',
+    scarceLayer: 'Scarce layer',
+    evidence: 'Evidence',
+    risk: 'Main risk',
+    updated: 'Updated {{date}}',
+    verdict: {
+      top: 'Top research priority',
+      high: 'High research priority',
+      track: 'Worth tracking',
+      lead: 'Early lead / low priority',
+    },
+    strength: {
+      primary: 'Primary',
+      media: 'Media',
+      analysis: 'Analysis',
+      social: 'Social',
+    },
+  },
   backtest: {
     title: '🧪 Backtest Lab',
     presetGroup: 'Strategy preset',

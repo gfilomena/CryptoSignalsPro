@@ -84,3 +84,27 @@ export interface WhaleAlert {
   amounts?: { symbol?: string; amount: number; value_usd?: number }[]
   _category?: WhaleCategory
 }
+
+export type ResearchVerdict = 'top' | 'high' | 'track' | 'lead'
+
+export type EvidenceStrength = 'primary' | 'media' | 'analysis' | 'social'
+
+export interface ResearchEvidence {
+  claim: string
+  source: string
+  strength: EvidenceStrength
+}
+
+/** Serenity-skill-style equity research note: chain position, scarce layer, evidence, risk. */
+export interface EquityResearchNote {
+  ticker: string
+  company: string
+  market: string
+  chainPosition: string
+  scarceLayer: string
+  verdict: ResearchVerdict
+  thesis: string
+  evidence: ResearchEvidence[]
+  risk: string
+  updated: string
+}

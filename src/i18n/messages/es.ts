@@ -96,6 +96,28 @@ export const es: MessageTree = {
     loading: 'Cargando gráfico…',
   },
   collapsible: { toggle: 'Expandir / contraer' },
+  research: {
+    title: '🔬 Análisis de acciones (Serenity)',
+    disclaimer:
+      'Solo apoyo a la investigación, sin ejecución de operaciones. Notas estáticas, actualizadas a mano — pide a Claude que vuelva a ejecutar serenity-skill para evidencia actual.',
+    chainPosition: 'Posición en la cadena',
+    scarceLayer: 'Capa escasa',
+    evidence: 'Evidencia',
+    risk: 'Riesgo principal',
+    updated: 'Actualizado el {{date}}',
+    verdict: {
+      top: 'Máxima prioridad de investigación',
+      high: 'Alta prioridad de investigación',
+      track: 'Vale la pena seguir',
+      lead: 'Pista temprana / baja prioridad',
+    },
+    strength: {
+      primary: 'Primaria',
+      media: 'Medios',
+      analysis: 'Análisis',
+      social: 'Social',
+    },
+  },
   backtest: {
     title: '🧪 Backtest Lab',
     presetGroup: 'Preset de estrategia',

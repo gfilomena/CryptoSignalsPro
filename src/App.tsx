@@ -11,6 +11,7 @@ import { DetailView } from './components/DetailView'
 import { SentimentCard } from './components/SentimentCard'
 import { WhaleSection } from './components/WhaleSection'
 import { BacktestSection } from './components/BacktestSection'
+import { ResearchSection } from './components/ResearchSection'
 
 function Main() {
   const { t, locale } = useI18n()
@@ -112,6 +113,8 @@ function Main() {
       </div>
 
       <WhaleSection onSentimentChange={setWhaleMap} />
+
+      <ResearchSection />
 
       <BacktestSection />
 

@@ -96,6 +96,28 @@ export const it: MessageTree = {
     loading: 'Caricamento grafico…',
   },
   collapsible: { toggle: 'Espandi / Comprimi' },
+  research: {
+    title: '🔬 Ricerca azionaria (Serenity)',
+    disclaimer:
+      'Solo supporto alla ricerca, nessuna esecuzione di operazioni. Note statiche, aggiornate manualmente — chiedi a Claude di rieseguire serenity-skill per prove aggiornate.',
+    chainPosition: 'Posizione nella filiera',
+    scarceLayer: 'Livello scarso',
+    evidence: 'Evidenze',
+    risk: 'Rischio principale',
+    updated: 'Aggiornato il {{date}}',
+    verdict: {
+      top: 'Massima priorità di ricerca',
+      high: 'Alta priorità di ricerca',
+      track: 'Da monitorare',
+      lead: 'Spunto iniziale / bassa priorità',
+    },
+    strength: {
+      primary: 'Primaria',
+      media: 'Media',
+      analysis: 'Analisi',
+      social: 'Social',
+    },
+  },
   backtest: {
     title: '🧪 Backtest Lab',
     presetGroup: 'Preset strategia',

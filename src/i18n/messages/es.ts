@@ -313,6 +313,15 @@ export const es: MessageTree = {
       maxTradesPerDay: 'Máx. operaciones / día',
       maxDailyLossR: 'Máx. pérdida diaria (R)',
       minConfidence: 'Confianza mínima de la señal: {{v}}',
+      hint: {
+        capital: 'Capital total usado como base para calcular cuánto se arriesga en cada operación.',
+        capitalCurrency: 'Moneda del capital de referencia — se usa para convertir el riesgo a la moneda del par (USDT).',
+        riskPerTrade: 'Porcentaje del capital que puedes perder en una sola operación si se toca el stop. Determina el tamaño de la posición.',
+        minRiskReward: 'Relación mínima riesgo:recompensa requerida para aceptar un setup. El TP1 está en este nivel, el TP2 en +1R más.',
+        maxTradesPerDay: 'Número máximo de operaciones que el motor puede proponer en un día — superado este límite el día se bloquea.',
+        maxDailyLossR: 'Pérdida máxima diaria (en múltiplos de R) antes de que el motor bloquee nuevas señales hasta el día siguiente.',
+        minConfidence: 'Puntuación mínima de fiabilidad (0-100) requerida para que un setup se convierta en señal confirmada — súbela para reducir señales falsas.',
+      },
       error: {
         push_unsupported: 'Las notificaciones push no son compatibles con este navegador.',
         push_backend_not_configured: 'Backend de notificaciones aún no configurado (falta Supabase + clave VAPID).',

@@ -313,6 +313,15 @@ export const en: MessageTree = {
       maxTradesPerDay: 'Max trades / day',
       maxDailyLossR: 'Max daily loss (R)',
       minConfidence: 'Min signal confidence: {{v}}',
+      hint: {
+        capital: 'Total capital used as the base to calculate how much is risked on each trade.',
+        capitalCurrency: "Currency of the reference capital — used to convert the risk amount into the pair's quote currency (USDT).",
+        riskPerTrade: 'Percentage of capital you can lose on a single trade if the stop is hit. Determines position size.',
+        minRiskReward: 'Minimum reward-to-risk ratio required to accept a setup. TP1 sits at this level, TP2 at +1R more.',
+        maxTradesPerDay: 'Maximum number of trades the engine can propose in one day — beyond this limit the day locks.',
+        maxDailyLossR: 'Maximum daily loss (in R multiples) before the engine blocks new signals until the next day.',
+        minConfidence: 'Minimum reliability score (0-100) required for a setup to become a confirmed signal — raise it to reduce false signals.',
+      },
       error: {
         push_unsupported: 'Push notifications are not supported in this browser.',
         push_backend_not_configured: 'Push backend not configured yet (Supabase + VAPID key missing).',

@@ -149,8 +149,9 @@ export function SetupPanel({ onConfigChange }: Props) {
 
       <div className="bt-group">
         <div className="bt-group-title">{t('scalp.setup.riskGroup')}</div>
-        <div className="bt-row">
-          <label className="bt-field">
+
+        <div className="bt-field-row">
+          <label className="bt-field bt-field-control">
             {t('scalp.setup.capital')}
             <input
               type="number"
@@ -159,7 +160,11 @@ export function SetupPanel({ onConfigChange }: Props) {
               onChange={(e) => updateConfig({ capital: +e.target.value })}
             />
           </label>
-          <label className="bt-field">
+          <p className="bt-field-hint">{t('scalp.setup.hint.capital')}</p>
+        </div>
+
+        <div className="bt-field-row">
+          <label className="bt-field bt-field-control">
             {t('scalp.setup.capitalCurrency')}
             <select value={config.capitalCurrency} onChange={(e) => updateConfig({ capitalCurrency: e.target.value as Currency })}>
               <option value="usd">USD ($)</option>
@@ -167,7 +172,11 @@ export function SetupPanel({ onConfigChange }: Props) {
               <option value="chf">CHF (Fr.)</option>
             </select>
           </label>
-          <label className="bt-field">
+          <p className="bt-field-hint">{t('scalp.setup.hint.capitalCurrency')}</p>
+        </div>
+
+        <div className="bt-field-row">
+          <label className="bt-field bt-field-control">
             {t('scalp.setup.riskPerTrade', { v: config.riskPerTradePct })}
             <input
               type="range"
@@ -178,9 +187,11 @@ export function SetupPanel({ onConfigChange }: Props) {
               onChange={(e) => updateConfig({ riskPerTradePct: +e.target.value })}
             />
           </label>
+          <p className="bt-field-hint">{t('scalp.setup.hint.riskPerTrade')}</p>
         </div>
-        <div className="bt-row" style={{ marginTop: 10 }}>
-          <label className="bt-field">
+
+        <div className="bt-field-row">
+          <label className="bt-field bt-field-control">
             {t('scalp.setup.minRiskReward', { v: config.minRiskReward })}
             <input
               type="range"
@@ -191,7 +202,11 @@ export function SetupPanel({ onConfigChange }: Props) {
               onChange={(e) => updateConfig({ minRiskReward: +e.target.value })}
             />
           </label>
-          <label className="bt-field">
+          <p className="bt-field-hint">{t('scalp.setup.hint.minRiskReward')}</p>
+        </div>
+
+        <div className="bt-field-row">
+          <label className="bt-field bt-field-control">
             {t('scalp.setup.maxTradesPerDay')}
             <input
               type="number"
@@ -201,7 +216,11 @@ export function SetupPanel({ onConfigChange }: Props) {
               onChange={(e) => updateConfig({ maxTradesPerDay: +e.target.value })}
             />
           </label>
-          <label className="bt-field">
+          <p className="bt-field-hint">{t('scalp.setup.hint.maxTradesPerDay')}</p>
+        </div>
+
+        <div className="bt-field-row">
+          <label className="bt-field bt-field-control">
             {t('scalp.setup.maxDailyLossR')}
             <input
               type="number"
@@ -212,7 +231,11 @@ export function SetupPanel({ onConfigChange }: Props) {
               onChange={(e) => updateConfig({ maxDailyLossR: +e.target.value })}
             />
           </label>
-          <label className="bt-field">
+          <p className="bt-field-hint">{t('scalp.setup.hint.maxDailyLossR')}</p>
+        </div>
+
+        <div className="bt-field-row">
+          <label className="bt-field bt-field-control">
             {t('scalp.setup.minConfidence', { v: config.minSignalConfidence })}
             <input
               type="range"
@@ -222,6 +245,7 @@ export function SetupPanel({ onConfigChange }: Props) {
               onChange={(e) => updateConfig({ minSignalConfidence: +e.target.value })}
             />
           </label>
+          <p className="bt-field-hint">{t('scalp.setup.hint.minConfidence')}</p>
         </div>
       </div>
     </CollapsiblePanel>

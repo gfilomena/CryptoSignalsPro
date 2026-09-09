@@ -24,6 +24,7 @@
         .header-top {
             display: flex;
             justify-content: flex-end;
+            margin-top: max(16px, env(safe-area-inset-top));
             margin-bottom: 12px;
         }
 
@@ -887,6 +888,27 @@
         .bt-field select:focus, .bt-field input[type="number"]:focus {
             border-color: rgba(56, 189, 248, 0.5);
         }
+        .bt-field-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .bt-field-row:last-child { border-bottom: none; }
+        .bt-field-row .bt-field-control {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 0 0 220px;
+        }
+        .bt-field-row .bt-field-hint {
+            font-size: 0.78rem;
+            line-height: 1.4;
+            opacity: 0.55;
+            flex: 1;
+            margin: 0;
+        }
         .bt-slider-wrap {
             display: flex;
             align-items: center;
@@ -1113,6 +1135,8 @@
             .bt-row { grid-template-columns: 1fr 1fr; }
             .bt-assets-grid { grid-template-columns: repeat(3, 1fr); }
             .bt-summary-grid { grid-template-columns: repeat(2, 1fr); }
+            .bt-field-row { flex-direction: column; align-items: stretch; gap: 6px; }
+            .bt-field-row .bt-field-control { flex: none; }
         }
 
         .bt-preset-desc {

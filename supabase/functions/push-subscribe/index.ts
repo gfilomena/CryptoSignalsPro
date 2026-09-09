@@ -30,7 +30,7 @@ Deno.serve(async (req: Request) => {
       // signal-cycle). Still selectable/visible in the Signal History, just not push-worthy.
       const alertTypes = Array.isArray(body.alertTypes) && body.alertTypes.length > 0
         ? body.alertTypes
-        : ["ENTRY_CONFIRMED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
+        : ["ENTRY_CONFIRMED", "EXIT_SUGGESTED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
 
       const { error } = await sb.from("push_subscriptions").upsert(
         { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, alert_types: alertTypes, updated_at: new Date().toISOString() },

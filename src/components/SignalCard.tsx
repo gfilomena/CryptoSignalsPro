@@ -1,11 +1,12 @@
 import { useI18n } from '../i18n/useI18n'
 import { CURRENCY_SYMBOLS } from '../lib/currency'
-import type { SignalSnapshot } from '../types/scalpSignal'
+import type { PaperTrade, SignalSnapshot } from '../types/scalpSignal'
 
 interface Props {
   snapshot: SignalSnapshot | null
   loading: boolean
   whaleContext?: 'bullish' | 'bearish' | null
+  openTrade?: PaperTrade | null
 }
 
 const STATE_ICON: Record<string, string> = {
@@ -25,7 +26,7 @@ function fmtUsd(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export function SignalCard({ snapshot, loading, whaleContext }: Props) {
+export function SignalCard({ snapshot, loading, whaleContext, openTrade }: Props) {
   const { t } = useI18n()
 
   const state = snapshot?.state ?? 'NO_TRADE'
@@ -46,6 +47,10 @@ export function SignalCard({ snapshot, loading, whaleContext }: Props) {
           <span className="current-signal-symbol">{snapshot?.symbol ?? 'BTC'}/USDT</span>
           {setup ? <span className="scalp-setup-type-badge">{t(`scalp.setupType.${setup.setupType}`)}</span> : null}
         </div>
+
+        {openTrade?.result === 'OPEN' && openTrade.exitSuggested ? (
+          <div className="current-signal-exit-suggested">⚠️ {t('scalp.exitSuggested')}</div>
+        ) : null}
 
         {loading ? <div className="current-signal-loading">{t('scalp.loading')}</div> : null}
 

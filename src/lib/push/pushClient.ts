@@ -5,7 +5,14 @@ import type { AlertType } from '../../types/scalpSignal'
 // SETUP_DETECTED is intentionally excluded: prudent mode never interrupts the user for a setup
 // that isn't yet a real, risk-validated trade — it's still recorded in the Signal History for
 // transparency, just never push-worthy (see PUSH_ALERT_TYPES in strategyConfig.ts).
-export const ALL_ALERT_TYPES: AlertType[] = ['ENTRY_CONFIRMED', 'STOP_HIT', 'TP1_HIT', 'TP2_HIT', 'SETUP_INVALIDATED']
+export const ALL_ALERT_TYPES: AlertType[] = [
+  'ENTRY_CONFIRMED',
+  'EXIT_SUGGESTED',
+  'STOP_HIT',
+  'TP1_HIT',
+  'TP2_HIT',
+  'SETUP_INVALIDATED',
+]
 
 export interface PushStatus {
   /** Push API + Service Worker available in this browser at all. */

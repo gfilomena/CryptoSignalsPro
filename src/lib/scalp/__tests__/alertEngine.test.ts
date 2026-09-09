@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAlert } from '../alertEngine'
+import { buildAlert, buildExitSuggestionAlert } from '../alertEngine'
 import { DEFAULT_STRATEGY_CONFIG } from '../../../config/strategyConfig'
 import type { ScalpSetup, Zone } from '../../../types/scalpSignal'
 
@@ -159,5 +159,26 @@ describe('buildAlert', () => {
       config,
     })
     expect(alert?.type).toBe('SETUP_INVALIDATED')
+  })
+})
+
+describe('buildExitSuggestionAlert', () => {
+  it('builds an EXIT_SUGGESTED event carrying the open trade levels, tagged TRADE_ACTIVE', () => {
+    const alert = buildExitSuggestionAlert({
+      symbol: 'BTC',
+      timeframe: '15m',
+      direction: 'long',
+      entryPrice: 100,
+      stopLoss: 98,
+      takeProfit1: 104,
+      takeProfit2: 106,
+      reasons: ['exit_rsi_reversal', 'exit_macd_reversal'],
+      now,
+    })
+    expect(alert.type).toBe('EXIT_SUGGESTED')
+    expect(alert.state).toBe('TRADE_ACTIVE')
+    expect(alert.direction).toBe('long')
+    expect(alert.stopLoss).toBe(98)
+    expect(alert.reasons).toContain('exit_rsi_reversal')
   })
 })

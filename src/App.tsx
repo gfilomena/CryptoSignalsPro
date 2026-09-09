@@ -119,6 +119,7 @@ function Main() {
         snapshot={signalData?.snapshot ?? null}
         loading={signalLoading}
         whaleContext={whaleMap[signalData?.snapshot?.symbol ?? 'BTC'] ?? null}
+        openTrade={signalData?.paperTrades.find((t) => t.result === 'OPEN') ?? null}
       />
 
       <div className="status-bar">

@@ -29,6 +29,7 @@ function mapPaperTrade(row: Record<string, unknown>) {
     exitPrice: row.exit_price != null ? Number(row.exit_price) : undefined,
     result: row.result, pnl: row.pnl != null ? Number(row.pnl) : undefined,
     pnlR: row.pnl_r != null ? Number(row.pnl_r) : undefined, costPct: Number(row.cost_pct ?? 0),
+    exitSuggested: Boolean(row.exit_suggested),
   };
 }
 

@@ -13,8 +13,9 @@ import { evaluateSetup } from './strategyEngine'
 import { calculateRisk, initialDailyRisk, updateDailyRisk } from './riskEngine'
 import { calculateConfidenceScore } from './confidenceScore'
 import { nextSignalState } from './signalStateMachine'
-import { buildAlert } from './alertEngine'
+import { buildAlert, buildExitSuggestionAlert } from './alertEngine'
 import { closePaperTrade, computePaperStats, openPaperTrade } from './paperTrading'
+import { detectExitSignal } from './exitSignal'
 
 export interface SignalDataResult {
   snapshot: SignalSnapshot
@@ -162,6 +163,31 @@ async function evaluateSymbolLocally(symbolDef: ScalpSymbolDef, config: Strategy
     openTrade = null
   }
 
+  let exitAlert: AlertEvent | null = null
+  if (nextState === 'TRADE_ACTIVE' && openTrade && !openTrade.exitSuggested) {
+    const exitSignal = detectExitSignal(entryCandles, openTrade.direction, config)
+    if (exitSignal.suggested) {
+      const exitReasons = [
+        exitSignal.candlestickReversal ? 'exit_candle_rejection' : null,
+        exitSignal.rsiReversal ? 'exit_rsi_reversal' : null,
+        exitSignal.macdReversal ? 'exit_macd_reversal' : null,
+      ].filter((r): r is string => r !== null)
+      exitAlert = buildExitSuggestionAlert({
+        symbol: symbolDef.symbol,
+        timeframe: config.entryTimeframe,
+        direction: openTrade.direction,
+        entryPrice: openTrade.entryPrice,
+        stopLoss: openTrade.stopLoss,
+        takeProfit1: openTrade.takeProfit1,
+        takeProfit2: openTrade.takeProfit2,
+        reasons: exitReasons,
+        now,
+      })
+      openTrade = { ...openTrade, exitSuggested: true }
+      paperTrades = paperTrades.map((t) => (t.id === openTrade!.id ? openTrade! : t))
+    }
+  }
+
   const snapshot: SignalSnapshot = {
     symbol: symbolDef.symbol,
     state: nextState,
@@ -173,7 +199,7 @@ async function evaluateSymbolLocally(symbolDef: ScalpSymbolDef, config: Strategy
     lastAlert: alert ?? store.lastAlert,
     updatedAt: now,
   }
-  const alerts = alert ? [alert, ...store.alerts].slice(0, 200) : store.alerts
+  const alerts = [alert, exitAlert].filter((a): a is AlertEvent => a !== null).concat(store.alerts).slice(0, 200)
 
   saveLocalStore(symbolDef.symbol, {
     snapshot,

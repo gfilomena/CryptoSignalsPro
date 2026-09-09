@@ -242,6 +242,7 @@ export const it: MessageTree = {
     short: 'SHORT',
     reasonsTitle: 'Perché questo segnale:',
     noSetupHint: 'Nessun setup operativo al momento — modalità prudente: il motore preferisce NO TRADE piuttosto che generare un segnale debole.',
+    exitSuggested: 'Considera di chiudere in anticipo — sono comparsi segnali di inversione contro la posizione attiva (questo non chiude il trade automaticamente).',
     setupType: {
       ZONE_REACTION: 'Reazione su zona',
       BREAKOUT_PULLBACK_RETEST: 'Breakout + pullback + retest',
@@ -284,6 +285,9 @@ export const it: MessageTree = {
       rsi_healthy: 'RSI in zona sana (conferma secondaria)',
       macd_bullish: 'MACD rialzista (conferma secondaria)',
       macd_bearish: 'MACD ribassista (conferma secondaria)',
+      exit_candle_rejection: 'Candela di rigetto contro la posizione',
+      exit_rsi_reversal: 'RSI in inversione contro la posizione',
+      exit_macd_reversal: 'MACD in inversione contro la posizione',
     },
     history: {
       title: '📜 Storico Segnali',
@@ -357,6 +361,7 @@ export const it: MessageTree = {
     alertType: {
       SETUP_DETECTED: 'Setup rilevato',
       ENTRY_CONFIRMED: 'Entry confermata',
+      EXIT_SUGGESTED: 'Uscita consigliata',
       STOP_HIT: 'Stop colpito',
       TP1_HIT: 'TP1 raggiunto',
       TP2_HIT: 'TP2 raggiunto',

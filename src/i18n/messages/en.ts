@@ -233,6 +233,7 @@ export const en: MessageTree = {
     short: 'SHORT',
     reasonsTitle: 'Why this signal:',
     noSetupHint: 'No tradable setup right now — prudent mode: the engine prefers NO TRADE over a weak signal.',
+    exitSuggested: 'Consider closing early — reversal signals have appeared against the open position (this does not close the trade automatically).',
     setupType: {
       ZONE_REACTION: 'Zone reaction',
       BREAKOUT_PULLBACK_RETEST: 'Breakout + pullback + retest',
@@ -275,6 +276,9 @@ export const en: MessageTree = {
       rsi_healthy: 'RSI in a healthy range (secondary confirmation)',
       macd_bullish: 'MACD bullish (secondary confirmation)',
       macd_bearish: 'MACD bearish (secondary confirmation)',
+      exit_candle_rejection: 'Rejection candle against the position',
+      exit_rsi_reversal: 'RSI reversing against the position',
+      exit_macd_reversal: 'MACD reversing against the position',
     },
     history: {
       title: '📜 Signal History',
@@ -348,6 +352,7 @@ export const en: MessageTree = {
     alertType: {
       SETUP_DETECTED: 'Setup detected',
       ENTRY_CONFIRMED: 'Entry confirmed',
+      EXIT_SUGGESTED: 'Exit suggested',
       STOP_HIT: 'Stop hit',
       TP1_HIT: 'TP1 hit',
       TP2_HIT: 'TP2 hit',

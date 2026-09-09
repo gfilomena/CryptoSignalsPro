@@ -107,7 +107,7 @@ interface StrategyConfig {
   tradingCosts: { feePct: number; spreadPct: number; slippagePct: number };
 }
 
-const PUSH_ALERT_TYPES = ["ENTRY_CONFIRMED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
+const PUSH_ALERT_TYPES = ["ENTRY_CONFIRMED", "EXIT_SUGGESTED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
 
 // ---------------------------------------------------------------------------
 // Market regime with swing structure (ported from src/lib/scalp/regime.ts)
@@ -272,6 +272,27 @@ function detectConfirmation(candles: Candle[], zone: Zone, direction: TradeDirec
   const macd = calculateMACD(closes);
   const macdConfirmed = direction === "long" ? macd.histogram > 0 : macd.histogram < 0;
   return { confirmed: candlestickRejection && reclaimClose, candlestickRejection, reclaimClose, volumeConfirmed, rsiConfirmed, macdConfirmed };
+}
+
+// ---------------------------------------------------------------------------
+// Exit signal: discretionary "consider closing early" for an open trade (ported from
+// exitSignal.ts) — mirrors detectConfirmation but inverted; never closes the paper trade itself.
+// ---------------------------------------------------------------------------
+interface ExitSignalInfo { suggested: boolean; candlestickReversal: boolean; rsiReversal: boolean; macdReversal: boolean }
+
+function detectExitSignal(candles: Candle[], direction: TradeDirection, config: StrategyConfig): ExitSignalInfo {
+  const last = candles[candles.length - 1];
+  const body = Math.abs(last.close - last.open);
+  const lowerWick = Math.min(last.open, last.close) - last.low;
+  const upperWick = last.high - Math.max(last.open, last.close);
+  const candlestickReversal = direction === "long" ? upperWick > body && last.close <= last.open : lowerWick > body && last.close >= last.open;
+  const closes = candles.map((c) => c.close);
+  const rsi = calculateRSI(closes, config.rsiPeriod);
+  const rsiReversal = direction === "long" ? rsi < 45 : rsi > 55;
+  const macd = calculateMACD(closes);
+  const macdReversal = direction === "long" ? macd.histogram < 0 : macd.histogram > 0;
+  const count = [candlestickReversal, rsiReversal, macdReversal].filter(Boolean).length;
+  return { suggested: count >= 2, candlestickReversal, rsiReversal, macdReversal };
 }
 
 // ---------------------------------------------------------------------------
@@ -463,7 +484,7 @@ function nextSignalState(ctx: {
 // ---------------------------------------------------------------------------
 // Alert engine (ported from alertEngine.ts) — unchanged logic
 // ---------------------------------------------------------------------------
-type AlertType = "SETUP_DETECTED" | "ENTRY_CONFIRMED" | "STOP_HIT" | "TP1_HIT" | "TP2_HIT" | "SETUP_INVALIDATED";
+type AlertType = "SETUP_DETECTED" | "ENTRY_CONFIRMED" | "EXIT_SUGGESTED" | "STOP_HIT" | "TP1_HIT" | "TP2_HIT" | "SETUP_INVALIDATED";
 
 function mapTransitionToAlertType(prev: SignalState, next: SignalState, targetHit?: "TP1" | "TP2"): AlertType | null {
   const wasSetupLike = prev === "LONG_SETUP" || prev === "SHORT_SETUP";
@@ -506,6 +527,17 @@ function buildAlert(ctx: AlertBuildContext): AlertEvent | null {
     riskRewardRatio: ctx.risk?.valid ? ctx.risk.riskRewardRatio : undefined,
     confidence: ctx.confidence?.total, capitalCurrency: ctx.risk?.capitalCurrency,
     reasons: ctx.reasons, timestamp: ctx.now,
+  };
+}
+
+function buildExitSuggestionAlert(ctx: {
+  symbol: string; timeframe: string; direction: TradeDirection;
+  entryPrice: number; stopLoss: number; takeProfit1: number; takeProfit2: number; reasons: string[]; now: number;
+}): AlertEvent {
+  return {
+    id: crypto.randomUUID(), symbol: ctx.symbol, timeframe: ctx.timeframe, type: "EXIT_SUGGESTED", state: "TRADE_ACTIVE",
+    direction: ctx.direction, entryPrice: ctx.entryPrice, stopLoss: ctx.stopLoss,
+    takeProfit1: ctx.takeProfit1, takeProfit2: ctx.takeProfit2, reasons: ctx.reasons, timestamp: ctx.now,
   };
 }
 
@@ -659,12 +691,33 @@ Deno.serve(async () => {
         dailyRiskNext = updateDailyRisk(dailyRiskNext, config, { closedLossR: pnlR < 0 ? pnlR : undefined });
       }
 
+      // Discretionary "consider closing early" — only while the trade is still open and hasn't
+      // already gotten one for this position (never fires twice per open trade).
+      let exitAlert: AlertEvent | null = null;
+      if (nextState === "TRADE_ACTIVE" && openTradeRow && !openTradeRow.exit_suggested) {
+        const exitSignal = detectExitSignal(entryCandles, activeTrade!.direction, config);
+        if (exitSignal.suggested) {
+          const exitReasons = [
+            exitSignal.candlestickReversal ? "exit_candle_rejection" : null,
+            exitSignal.rsiReversal ? "exit_rsi_reversal" : null,
+            exitSignal.macdReversal ? "exit_macd_reversal" : null,
+          ].filter((r): r is string => r !== null);
+          exitAlert = buildExitSuggestionAlert({
+            symbol: symbolDef.symbol, timeframe: config.entryTimeframe, direction: activeTrade!.direction,
+            entryPrice: Number(openTradeRow.entry_price), stopLoss: activeTrade!.stopLoss,
+            takeProfit1: activeTrade!.takeProfit1, takeProfit2: activeTrade!.takeProfit2, reasons: exitReasons, now,
+          });
+          await sb.from("scalp_paper_trades").update({ exit_suggested: true }).eq("id", openTradeRow.id);
+        }
+      }
+
       await sb.from("scalp_signal_state").upsert({
         symbol: symbolDef.symbol, state: nextState, regime, setup, risk, confidence,
         daily_risk: dailyRiskNext, last_alert: alert ?? lastAlert, updated_at: new Date(now).toISOString(),
       });
 
       let pushResult: unknown = null;
+      let exitPushResult: unknown = null;
       if (alert) {
         await sb.from("scalp_alerts").insert({
           id: alert.id, symbol: alert.symbol, timeframe: alert.timeframe, type: alert.type, state: alert.state,
@@ -675,8 +728,17 @@ Deno.serve(async () => {
         });
         pushResult = await sendPushToSubscribers(sb, alert);
       }
+      if (exitAlert) {
+        await sb.from("scalp_alerts").insert({
+          id: exitAlert.id, symbol: exitAlert.symbol, timeframe: exitAlert.timeframe, type: exitAlert.type, state: exitAlert.state,
+          direction: exitAlert.direction, entry_price: exitAlert.entryPrice, stop_loss: exitAlert.stopLoss,
+          take_profit_1: exitAlert.takeProfit1, take_profit_2: exitAlert.takeProfit2,
+          reasons: exitAlert.reasons, created_at: new Date(exitAlert.timestamp).toISOString(),
+        });
+        exitPushResult = await sendPushToSubscribers(sb, exitAlert);
+      }
 
-      results[symbolDef.symbol] = { state: nextState, alert: alert?.type ?? null, push: pushResult };
+      results[symbolDef.symbol] = { state: nextState, alert: alert?.type ?? null, push: pushResult, exitAlert: exitAlert?.type ?? null, exitPush: exitPushResult };
     }
 
     return new Response(JSON.stringify({ ok: true, results }), { headers: { "Content-Type": "application/json" }, status: 200 });

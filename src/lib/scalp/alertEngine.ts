@@ -1,4 +1,4 @@
-import type { AlertEvent, AlertType, ConfidenceBreakdown, RiskCalc, ScalpSetup, SignalState } from '../../types/scalpSignal'
+import type { AlertEvent, AlertType, ConfidenceBreakdown, RiskCalc, ScalpSetup, SignalState, TradeDirection } from '../../types/scalpSignal'
 import type { StrategyConfig } from '../../config/strategyConfig'
 
 export interface AlertBuildContext {
@@ -70,6 +70,45 @@ export function buildAlert(ctx: AlertBuildContext): AlertEvent | null {
     riskRewardRatio: ctx.risk?.valid ? ctx.risk.riskRewardRatio : undefined,
     confidence: ctx.confidence?.total,
     capitalCurrency: ctx.risk?.capitalCurrency,
+    reasons: ctx.reasons,
+    timestamp: ctx.now,
+  }
+}
+
+export interface ExitSuggestionContext {
+  symbol: string
+  timeframe: string
+  direction: TradeDirection
+  entryPrice: number
+  stopLoss: number
+  takeProfit1: number
+  takeProfit2: number
+  reasons: string[]
+  now: number
+}
+
+/**
+ * EXIT_SUGGESTED doesn't fit the state-transition model above (the signal STATE stays
+ * TRADE_ACTIVE the whole time) — the caller is responsible for firing this at most once per open
+ * trade (tracked via PaperTrade.exitSuggested) so it never fires the same trade twice.
+ */
+export function buildExitSuggestionAlert(ctx: ExitSuggestionContext): AlertEvent {
+  const id =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${ctx.symbol}-EXIT_SUGGESTED-${ctx.now}-${Math.random().toString(36).slice(2, 8)}`
+
+  return {
+    id,
+    symbol: ctx.symbol,
+    timeframe: ctx.timeframe,
+    type: 'EXIT_SUGGESTED',
+    state: 'TRADE_ACTIVE',
+    direction: ctx.direction,
+    entryPrice: ctx.entryPrice,
+    stopLoss: ctx.stopLoss,
+    takeProfit1: ctx.takeProfit1,
+    takeProfit2: ctx.takeProfit2,
     reasons: ctx.reasons,
     timestamp: ctx.now,
   }

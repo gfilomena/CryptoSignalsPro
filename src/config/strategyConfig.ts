@@ -6,6 +6,7 @@ import type { AlertType } from '../types/scalpSignal'
  * (prudent mode: only real trade-affecting events push). */
 export const PUSH_ALERT_TYPES: AlertType[] = [
   'ENTRY_CONFIRMED',
+  'EXIT_SUGGESTED',
   'STOP_HIT',
   'TP1_HIT',
   'TP2_HIT',

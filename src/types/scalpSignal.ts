@@ -112,10 +112,20 @@ export interface ConfidenceBreakdown {
 export type AlertType =
   | 'SETUP_DETECTED'
   | 'ENTRY_CONFIRMED'
+  | 'EXIT_SUGGESTED'
   | 'STOP_HIT'
   | 'TP1_HIT'
   | 'TP2_HIT'
   | 'SETUP_INVALIDATED'
+
+export interface ExitSignalInfo {
+  /** True once at least 2 of the 3 reversal signals below agree — a discretionary heads-up,
+   * never an automatic close (the paper trade itself still only closes on STOP/TP). */
+  suggested: boolean
+  candlestickReversal: boolean
+  rsiReversal: boolean
+  macdReversal: boolean
+}
 
 export interface AlertEvent {
   id: string
@@ -178,6 +188,9 @@ export interface PaperTrade {
   pnl?: number
   pnlR?: number
   costPct: number
+  /** Set once an EXIT_SUGGESTED alert has fired for this trade, so it never fires twice for the
+   * same open position. */
+  exitSuggested?: boolean
 }
 
 export interface PaperStats {

@@ -4,6 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<!-- Linked mainly as a safety net for Android/Chrome: if someone installs straight from this
+     page despite the instructions, the manifest's start_url (/) still makes the installed icon
+     open the real dashboard, not this guide. iOS Safari has no equivalent — it always saves
+     whatever page is on screen when "Add to Home Screen" is tapped, which is exactly why the
+     steps below send people to the dashboard first. -->
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <title>Installa l'app — CryptoSignals Pro</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -188,11 +195,11 @@
     <div id="panel-ios" role="tabpanel" aria-labelledby="tab-ios">
       <div class="warn">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span><strong>Importante:</strong> apri questa pagina in <strong>Safari</strong>. Su iPhone solo Safari può aggiungere l'app alla schermata Home.</span>
+        <span><strong>Importante:</strong> apri questa pagina in <strong>Safari</strong> e fai "Aggiungi alla schermata Home" <strong>dalla dashboard</strong> (dopo il passaggio 1 qui sotto) — mai da questa pagina di istruzioni, altrimenti l'icona salvata aprirà questa guida invece dell'app.</span>
       </div>
       <div class="steps-label">I 5 passaggi su iPhone</div>
       <div class="steps">
-        <div class="step"><div class="step-icon"><span class="step-num">1</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9.5"/><path d="M15.5 8.5 12.8 12.8 8.5 15.5l2.7-4.3z" fill="currentColor" stroke="none"/></svg></div><div class="step-text"><b>Sei già in Safari?</b><span class="sub">Bene — se sei arrivato da un altro browser, riapri questo link in Safari</span></div></div>
+        <div class="step"><div class="step-icon"><span class="step-num">1</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9.5"/><path d="M15.5 8.5 12.8 12.8 8.5 15.5l2.7-4.3z" fill="currentColor" stroke="none"/></svg></div><div class="step-text"><b>Tocca "Apri l'app" qui sopra</b><span class="sub">Ti porta sulla dashboard reale — i passaggi da qui in poi vanno fatti da lì, non da questa pagina</span></div></div>
         <div class="step"><div class="step-icon"><span class="step-num">2</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 6l-4-4-4 4"/><line x1="12" y1="2" x2="12" y2="15"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7"/></svg></div><div class="step-text"><b>Tocca l'icona Condividi</b><span class="sub">Il quadrato con la freccia in alto, nella barra in basso</span></div></div>
         <div class="step"><div class="step-icon"><span class="step-num">3</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div><div class="step-text"><b>Tocca "Aggiungi alla schermata Home"</b><span class="sub">È nell'elenco delle azioni, un po' più in basso</span></div></div>
         <div class="step"><div class="step-icon"><span class="step-num">4</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="step-text"><b>Tocca "Aggiungi" in alto a destra</b><span class="sub">Compare un riquadro con nome e icona dell'app</span></div></div>
@@ -203,11 +210,11 @@
     <div id="panel-android" role="tabpanel" aria-labelledby="tab-android" hidden>
       <div class="warn">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span><strong>Importante:</strong> apri questa pagina in <strong>Chrome</strong>. Con un altro browser i nomi dei menu possono cambiare.</span>
+        <span><strong>Importante:</strong> apri questa pagina in <strong>Chrome</strong> e fai "Installa app" <strong>dalla dashboard</strong> (dopo il passaggio 1 qui sotto), non da questa pagina di istruzioni. Con un altro browser i nomi dei menu possono anche cambiare.</span>
       </div>
       <div class="steps-label">I 5 passaggi su Android</div>
       <div class="steps">
-        <div class="step"><div class="step-icon"><span class="step-num">1</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="9.5"/></svg></div><div class="step-text"><b>Sei già in Chrome?</b><span class="sub">Bene — se sei arrivato da un altro browser, riapri questo link in Chrome</span></div></div>
+        <div class="step"><div class="step-icon"><span class="step-num">1</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="9.5"/></svg></div><div class="step-text"><b>Tocca "Apri l'app" qui sopra</b><span class="sub">Ti porta sulla dashboard reale — i passaggi da qui in poi vanno fatti da lì, non da questa pagina</span></div></div>
         <div class="step"><div class="step-icon"><span class="step-num">2</span><svg width="5" height="16" viewBox="0 0 6 24" fill="currentColor"><circle cx="3" cy="4" r="2"/><circle cx="3" cy="12" r="2"/><circle cx="3" cy="20" r="2"/></svg></div><div class="step-text"><b>Tocca i tre puntini</b><span class="sub">In alto a destra, nella barra degli indirizzi</span></div></div>
         <div class="step"><div class="step-icon"><span class="step-num">3</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div><div class="step-text"><b>Tocca "Installa app"</b><span class="sub">Su alcuni telefoni: "Aggiungi a schermata Home"</span></div></div>
         <div class="step"><div class="step-icon"><span class="step-num">4</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="step-text"><b>Conferma su "Installa"</b><span class="sub">Compare un riquadro con nome e icona dell'app</span></div></div>
@@ -222,7 +229,11 @@
     var appUrl = location.origin + '/';
     document.getElementById('url-chip').textContent = appUrl.replace(/^https?:\/\//, '');
     document.getElementById('open-btn').addEventListener('click', function () {
-      window.open(appUrl, '_blank', 'noopener');
+      // Same-tab navigation on purpose: "Add to Home Screen" always saves whatever page is on
+      // screen when it's tapped (Safari) or, on Chrome, works reliably once you're on a page that
+      // links the manifest. Opening a new tab would leave this instructions page one swipe away
+      // and easy to save by mistake — navigating away entirely removes that trap.
+      location.href = appUrl;
     });
 
     var copyBtn = document.getElementById('copy-btn');

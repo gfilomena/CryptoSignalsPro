@@ -10,7 +10,7 @@
 SELECT cron.schedule(
   'bot-cycle-30s',
   '30 seconds',
-  $$SELECT extensions.http_post(
+  $$SELECT net.http_post(
     url := 'https://<PROJECT_REF>.supabase.co/functions/v1/bot-cycle'::text,
     body := '{}'::jsonb,
     headers := jsonb_build_object(

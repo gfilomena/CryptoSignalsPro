@@ -4,3 +4,8 @@ export const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as stri
 export const hasSupabaseConfig = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
 
 export const EDGE_FN_URL = SUPABASE_URL ? `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1` : ''
+
+/** VAPID public key for Web Push subscriptions (safe to expose client-side; not a secret). */
+export const VAPID_PUBLIC_KEY = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string) || ''
+
+export const hasPushConfig = Boolean(hasSupabaseConfig && VAPID_PUBLIC_KEY)

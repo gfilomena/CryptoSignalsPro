@@ -5,6 +5,7 @@ export const en: MessageTree = {
   app: {
     title: '🚀 CryptoSignals Pro',
     subtitle: 'Multi-asset monitor with interactive guides • Hover ℹ️ to learn more!',
+    installApp: '📲 Get the app',
   },
   status: {
     status: 'Status:',

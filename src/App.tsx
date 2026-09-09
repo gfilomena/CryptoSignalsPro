@@ -111,6 +111,9 @@ function Main() {
         </div>
         <h1>{t('app.title')}</h1>
         <p>{t('app.subtitle')}</p>
+        <a className="install-app-btn" href="/install.html" target="_blank" rel="noopener">
+          {t('app.installApp')}
+        </a>
       </div>
 
       <SetupPanel onConfigChange={setScalpConfig} />

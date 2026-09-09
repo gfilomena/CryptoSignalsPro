@@ -70,7 +70,25 @@
             opacity: 0.8;
             text-align: center;
         }
-        
+
+        .install-app-btn {
+            display: block;
+            width: fit-content;
+            margin: 14px auto 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-decoration: none;
+            padding: 9px 20px;
+            border-radius: 999px;
+            box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+        }
+        .install-app-btn:hover {
+            box-shadow: 0 6px 18px rgba(102, 126, 234, 0.5);
+        }
+
+
         /* Tooltip Styles */
         .info-icon {
             position: absolute;

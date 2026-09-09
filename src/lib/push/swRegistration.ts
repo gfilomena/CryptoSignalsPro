@@ -4,12 +4,24 @@ let applyUpdateFn: (() => Promise<void>) | null = null
 
 /** Registers the service worker and wires the "new version available" prompt. */
 export function initServiceWorker(onNeedRefresh: () => void): void {
-  if (!('serviceWorker' in navigator)) return
+  if (!('serviceWorker' in navigator)) {
+    console.warn('[sw-debug] navigator.serviceWorker unsupported in this browser')
+    return
+  }
   applyUpdateFn = registerSW({
     immediate: true,
     onNeedRefresh,
     onOfflineReady() {
       /* app shell cached for fast/offline-capable startup — nothing for the UI to do */
+    },
+    onRegisterError(error) {
+      console.error('[sw-debug] service worker registration FAILED:', error)
+    },
+    onRegisteredSW(url, registration) {
+      console.log('[sw-debug] service worker registered:', url, registration)
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        console.log('[sw-debug] getRegistrations() right after onRegisteredSW ->', regs.length)
+      })
     },
   })
 }

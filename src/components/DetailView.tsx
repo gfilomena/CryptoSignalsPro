@@ -4,6 +4,8 @@ import { LIVE_ASSETS } from '../constants/liveAssets'
 import { useI18n } from '../i18n/useI18n'
 import type { ChartTfKey } from '../lib/chart'
 import type { Currency } from '../types/domain'
+import type { SignalSnapshot } from '../types/scalpSignal'
+import { CURRENCY_SYMBOLS } from '../lib/currency'
 import { PriceChartBlock } from './PriceChartBlock'
 
 interface Props {
@@ -12,6 +14,8 @@ interface Props {
   chfRate: number | null
   formatPrice: (n: number) => string
   formatVolume: (n: number) => string
+  /** Scalp engine snapshot for this asset — currently populated for BTC only. */
+  scalpSnapshot?: SignalSnapshot | null
 }
 
 function IndicatorCard({
@@ -58,7 +62,11 @@ function IndicatorCard({
   )
 }
 
-export function DetailView({ asset, currency, chfRate, formatPrice, formatVolume }: Props) {
+function fmtUsd(n: number): string {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+export function DetailView({ asset, currency, chfRate, formatPrice, formatVolume, scalpSnapshot }: Props) {
   const { t } = useI18n()
   const [tf, setTf] = useState<ChartTfKey>('1S')
   const [tip, setTip] = useState<{ key: string; x: number; y: number } | null>(null)
@@ -216,6 +224,95 @@ export function DetailView({ asset, currency, chfRate, formatPrice, formatVolume
           status=""
           onInfo={onInfo}
         />
+
+        {scalpSnapshot ? (
+          <>
+            <IndicatorCard
+              tooltipKey="scalpEma200"
+              label={t('detail.labels.scalpEma200')}
+              value={asset.symbol === 'BTC' ? formatPrice(asset.ema200) : '—'}
+              color={asset.price > asset.ema200 ? '#22c55e' : '#ef4444'}
+              status={asset.price > asset.ema200 ? t('detail.emaStatus.above') : t('detail.emaStatus.below')}
+              onInfo={onInfo}
+            />
+            <IndicatorCard
+              tooltipKey="scalpAtr"
+              label={t('detail.labels.scalpAtr')}
+              value={scalpSnapshot.setup ? `${scalpSnapshot.setup.atrPct.toFixed(2)}%` : '—'}
+              color="#38bdf8"
+              status=""
+              onInfo={onInfo}
+            />
+            <IndicatorCard
+              tooltipKey="scalpRegime"
+              label={t('detail.labels.scalpRegime')}
+              value={t(`scalp.regime.${scalpSnapshot.regime}`)}
+              color={scalpSnapshot.regime === 'bullish' ? '#22c55e' : scalpSnapshot.regime === 'bearish' ? '#ef4444' : '#eab308'}
+              status=""
+              onInfo={onInfo}
+            />
+            <IndicatorCard
+              tooltipKey="scalpState"
+              label={t('detail.labels.scalpState')}
+              value={t(`scalp.state.${scalpSnapshot.state}`)}
+              color={scalpSnapshot.state.startsWith('LONG') ? '#22c55e' : scalpSnapshot.state.startsWith('SHORT') ? '#ef4444' : '#eab308'}
+              status=""
+              onInfo={onInfo}
+            />
+            {scalpSnapshot.setup && scalpSnapshot.risk?.valid ? (
+              <>
+                <IndicatorCard
+                  tooltipKey="scalpEntry"
+                  label={t('detail.labels.scalpEntry')}
+                  value={`$${fmtUsd(scalpSnapshot.setup.entryPrice)}`}
+                  color="#fff"
+                  status=""
+                  onInfo={onInfo}
+                />
+                <IndicatorCard
+                  tooltipKey="scalpStop"
+                  label={t('detail.labels.scalpStop')}
+                  value={`$${fmtUsd(scalpSnapshot.risk.stopLoss)}`}
+                  color="#ef4444"
+                  status=""
+                  onInfo={onInfo}
+                />
+                <IndicatorCard
+                  tooltipKey="scalpTp"
+                  label={t('detail.labels.scalpTp')}
+                  value={`$${fmtUsd(scalpSnapshot.risk.takeProfit1)} / $${fmtUsd(scalpSnapshot.risk.takeProfit2)}`}
+                  color="#22c55e"
+                  status=""
+                  onInfo={onInfo}
+                />
+                <IndicatorCard
+                  tooltipKey="scalpRR"
+                  label={t('detail.labels.scalpRR')}
+                  value={`1:${scalpSnapshot.risk.riskRewardRatio}`}
+                  color="#fff"
+                  status=""
+                  onInfo={onInfo}
+                />
+                <IndicatorCard
+                  tooltipKey="scalpRisk"
+                  label={t('detail.labels.scalpRisk')}
+                  value={`${CURRENCY_SYMBOLS[scalpSnapshot.risk.capitalCurrency]}${fmtUsd(scalpSnapshot.risk.riskAmount)}`}
+                  color="#ef4444"
+                  status=""
+                  onInfo={onInfo}
+                />
+                <IndicatorCard
+                  tooltipKey="scalpPositionSize"
+                  label={t('detail.labels.scalpPositionSize')}
+                  value={`${scalpSnapshot.risk.positionSize.toFixed(5)} ${asset.symbol}`}
+                  color="#fff"
+                  status=""
+                  onInfo={onInfo}
+                />
+              </>
+            ) : null}
+          </>
+        ) : null}
       </div>
 
       <div className="signals-section">

@@ -21,5 +21,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "backtest"]
+  "include": ["src", "backtest"],
+  "exclude": ["src/sw.ts"]
 }

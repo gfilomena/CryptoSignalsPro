@@ -1123,6 +1123,104 @@
             max-width: 720px;
         }
 
+        /* Scalp signal engine */
+        .current-signal-section {
+            margin-bottom: 20px;
+        }
+        .current-signal-card {
+            padding: 24px;
+        }
+        .current-signal-symbol {
+            font-size: 0.85rem;
+            font-weight: 600;
+            opacity: 0.55;
+            margin-left: 10px;
+        }
+        .current-signal-loading {
+            font-size: 0.85rem;
+            opacity: 0.6;
+            margin-top: 8px;
+        }
+        .current-signal-grid {
+            margin-top: 16px;
+        }
+        .current-signal-blocked {
+            margin-top: 14px;
+            color: #eab308;
+            font-size: 0.85rem;
+        }
+        .current-signal-reasons {
+            margin-top: 16px;
+            font-size: 0.85rem;
+        }
+        .current-signal-reasons ul {
+            list-style: none;
+            padding: 8px 0 0 0;
+            opacity: 0.8;
+        }
+        .current-signal-reasons li {
+            padding: 3px 0;
+        }
+        .current-signal-reasons li::before {
+            content: '• ';
+            opacity: 0.5;
+        }
+
+        .scalp-alert-types {
+            margin-bottom: 14px;
+        }
+        .scalp-setup-message {
+            color: #38bdf8;
+            opacity: 0.9 !important;
+        }
+
+        .scalp-table-wrap {
+            overflow-x: auto;
+        }
+        .scalp-history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+        .scalp-history-table th {
+            text-align: left;
+            padding: 8px 10px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            opacity: 0.5;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .scalp-history-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .scalp-history-table tbody tr:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .scalp-update-banner {
+            position: sticky;
+            top: 10px;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 0.88rem;
+        }
+        .scalp-update-actions {
+            display: flex;
+            gap: 8px;
+        }
+
         /* Price Chart */
         .chart-section {
             margin-bottom: 25px;

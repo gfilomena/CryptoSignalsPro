@@ -11,6 +11,14 @@ import { DetailView } from './components/DetailView'
 import { SentimentCard } from './components/SentimentCard'
 import { WhaleSection } from './components/WhaleSection'
 import { BacktestSection } from './components/BacktestSection'
+import { SignalCard } from './components/SignalCard'
+import { SetupPanel } from './components/SetupPanel'
+import { SignalHistoryPanel } from './components/SignalHistoryPanel'
+import { PaperTradingStats } from './components/PaperTradingStats'
+import { UpdatePrompt } from './components/UpdatePrompt'
+import { getStrategyConfig, type StrategyConfig } from './config/strategyConfig'
+import { getSignalData, type SignalDataResult } from './lib/scalp/signalClient'
+import { initServiceWorker, applyServiceWorkerUpdate } from './lib/push/swRegistration'
 
 function Main() {
   const { t, locale } = useI18n()
@@ -21,6 +29,10 @@ function Main() {
   const [fg, setFg] = useState<FearGreedState | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [whaleMap, setWhaleMap] = useState<Record<string, 'bullish' | 'bearish' | null>>({})
+  const [scalpConfig, setScalpConfig] = useState<StrategyConfig>(() => getStrategyConfig())
+  const [signalData, setSignalData] = useState<SignalDataResult | null>(null)
+  const [signalLoading, setSignalLoading] = useState(true)
+  const [updateAvailable, setUpdateAvailable] = useState(false)
 
   const refresh = useCallback(async () => {
     if (currency === 'chf' && !chfRate) return
@@ -60,6 +72,30 @@ function Main() {
     return () => clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    initServiceWorker(() => setUpdateAvailable(true))
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    async function refreshSignal() {
+      try {
+        const data = await getSignalData(scalpConfig)
+        if (!cancelled) setSignalData(data)
+      } catch {
+        /* keep last known signal on transient fetch errors */
+      } finally {
+        if (!cancelled) setSignalLoading(false)
+      }
+    }
+    refreshSignal()
+    const id = setInterval(refreshSignal, 30_000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [scalpConfig])
+
   const selectedAsset = useMemo(
     () => (selected ? cryptoBySymbol[selected] ?? null : null),
     [selected, cryptoBySymbol],
@@ -67,6 +103,8 @@ function Main() {
 
   return (
     <div className="container">
+      <UpdatePrompt visible={updateAvailable} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setUpdateAvailable(false)} />
+
       <div className="header">
         <div className="header-top">
           <LanguageSelector />
@@ -74,6 +112,10 @@ function Main() {
         <h1>{t('app.title')}</h1>
         <p>{t('app.subtitle')}</p>
       </div>
+
+      <SetupPanel onConfigChange={setScalpConfig} />
+
+      <SignalCard snapshot={signalData?.snapshot ?? null} loading={signalLoading} />
 
       <div className="status-bar">
         <div className="status-item">
@@ -115,6 +157,10 @@ function Main() {
 
       <BacktestSection />
 
+      <SignalHistoryPanel trades={signalData?.paperTrades ?? []} />
+
+      <PaperTradingStats stats={signalData?.paperStats ?? { totalTrades: 0, wins: 0, losses: 0, winRate: 0, profitFactor: 0, avgWin: 0, avgLoss: 0, expectancy: 0, maxDrawdown: 0, totalPnl: 0, avgRR: 0 }} />
+
       <SentimentCard data={fg} />
 
       <MarketGrid
@@ -136,6 +182,7 @@ function Main() {
           chfRate={chfRate}
           formatPrice={formatPrice}
           formatVolume={formatVolume}
+          scalpSnapshot={selectedAsset.symbol === signalData?.snapshot.symbol ? signalData?.snapshot : null}
         />
       ) : null}
     </div>

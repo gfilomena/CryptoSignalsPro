@@ -9,7 +9,7 @@
 
 SELECT cron.schedule(
   'signal-cycle-1m',
-  '1 minutes',
+  '* * * * *',
   $$SELECT extensions.http_post(
     url := 'https://<PROJECT_REF>.supabase.co/functions/v1/signal-cycle'::text,
     body := '{}'::jsonb,

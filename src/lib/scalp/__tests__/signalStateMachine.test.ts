@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { nextSignalState } from '../signalStateMachine'
-import type { RiskCalc, ScalpSetup } from '../../../types/scalpSignal'
+import type { RiskCalc, ScalpSetup, Zone } from '../../../types/scalpSignal'
+
+const zone: Zone = { kind: 'support', low: 98, high: 99.5, touches: 2, lastTouchIndex: 3 }
 
 function setup(overrides: Partial<ScalpSetup> = {}): ScalpSetup {
   return {
     symbol: 'BTC',
     direction: 'long',
     regime: 'bullish',
+    setupType: 'ZONE_REACTION',
+    zone,
     breakout: { direction: 'long', level: 100, breakoutIndex: 5, breakoutClose: 100.5 },
     pullback: { confirmed: true, pullbackIndex: 6, retestPrice: 99.8 },
-    confirmation: { confirmed: true, candlestickRejection: true, volumeConfirmed: true, rsiConfirmed: true, macdConfirmed: true },
+    confirmation: { confirmed: true, candlestickRejection: true, reclaimClose: true, volumeConfirmed: true, rsiConfirmed: true, macdConfirmed: true },
     entryPrice: 100,
     stopCandidate: 98,
     atr: 1,

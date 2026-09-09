@@ -2,14 +2,10 @@ import { edgeFetch, hasSupabaseConfig } from '../../config/supabaseClient'
 import { VAPID_PUBLIC_KEY, hasPushConfig } from '../../config/env'
 import type { AlertType } from '../../types/scalpSignal'
 
-export const ALL_ALERT_TYPES: AlertType[] = [
-  'SETUP_DETECTED',
-  'ENTRY_CONFIRMED',
-  'STOP_HIT',
-  'TP1_HIT',
-  'TP2_HIT',
-  'SETUP_INVALIDATED',
-]
+// SETUP_DETECTED is intentionally excluded: prudent mode never interrupts the user for a setup
+// that isn't yet a real, risk-validated trade — it's still recorded in the Signal History for
+// transparency, just never push-worthy (see PUSH_ALERT_TYPES in strategyConfig.ts).
+export const ALL_ALERT_TYPES: AlertType[] = ['ENTRY_CONFIRMED', 'STOP_HIT', 'TP1_HIT', 'TP2_HIT', 'SETUP_INVALIDATED']
 
 export interface PushStatus {
   /** Push API + Service Worker available in this browser at all. */

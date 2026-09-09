@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { buildAlert } from '../alertEngine'
 import { DEFAULT_STRATEGY_CONFIG } from '../../../config/strategyConfig'
-import type { ScalpSetup } from '../../../types/scalpSignal'
+import type { ScalpSetup, Zone } from '../../../types/scalpSignal'
 
 const config = { ...DEFAULT_STRATEGY_CONFIG, alertCooldownMs: 60_000 }
+
+const zone: Zone = { kind: 'support', low: 98, high: 99.5, touches: 2, lastTouchIndex: 3 }
 
 const setup: ScalpSetup = {
   symbol: 'BTC',
   direction: 'long',
   regime: 'bullish',
+  setupType: 'ZONE_REACTION',
+  zone,
   breakout: { direction: 'long', level: 100, breakoutIndex: 5, breakoutClose: 100.5 },
   pullback: { confirmed: true, pullbackIndex: 6, retestPrice: 99.8 },
-  confirmation: { confirmed: true, candlestickRejection: true, volumeConfirmed: true, rsiConfirmed: true, macdConfirmed: true },
+  confirmation: { confirmed: true, candlestickRejection: true, reclaimClose: true, volumeConfirmed: true, rsiConfirmed: true, macdConfirmed: true },
   entryPrice: 100,
   stopCandidate: 98,
   atr: 1,
@@ -34,7 +38,7 @@ describe('buildAlert', () => {
       setup,
       risk: null,
       confidence: null,
-      reasons: ['breakout_detected'],
+      reasons: ['zone_reaction_detected'],
       lastAlert: null,
       now,
       config,

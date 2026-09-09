@@ -115,7 +115,11 @@ function Main() {
 
       <SetupPanel onConfigChange={setScalpConfig} />
 
-      <SignalCard snapshot={signalData?.snapshot ?? null} loading={signalLoading} />
+      <SignalCard
+        snapshot={signalData?.snapshot ?? null}
+        loading={signalLoading}
+        whaleContext={whaleMap[signalData?.snapshot?.symbol ?? 'BTC'] ?? null}
+      />
 
       <div className="status-bar">
         <div className="status-item">

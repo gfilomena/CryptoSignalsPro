@@ -149,6 +149,7 @@ export function SetupPanel({ onConfigChange }: Props) {
 
       <div className="bt-group">
         <div className="bt-group-title">{t('scalp.setup.riskGroup')}</div>
+        <div className="scalp-mode-badge">{t('scalp.setup.modePrudent')}</div>
 
         <div className="bt-field-row">
           <label className="bt-field bt-field-control">
@@ -232,20 +233,6 @@ export function SetupPanel({ onConfigChange }: Props) {
             />
           </label>
           <p className="bt-field-hint">{t('scalp.setup.hint.maxDailyLossR')}</p>
-        </div>
-
-        <div className="bt-field-row">
-          <label className="bt-field bt-field-control">
-            {t('scalp.setup.minConfidence', { v: config.minSignalConfidence })}
-            <input
-              type="range"
-              min={40}
-              max={95}
-              value={config.minSignalConfidence}
-              onChange={(e) => updateConfig({ minSignalConfidence: +e.target.value })}
-            />
-          </label>
-          <p className="bt-field-hint">{t('scalp.setup.hint.minConfidence')}</p>
         </div>
       </div>
     </CollapsiblePanel>

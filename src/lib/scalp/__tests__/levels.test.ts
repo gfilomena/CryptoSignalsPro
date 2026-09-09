@@ -1,77 +1,83 @@
 import { describe, expect, it } from 'vitest'
-import { detectPullback, findRecentBreakout } from '../levels'
+import { findSetupCandidate, nextTargetZone } from '../levels'
 import { DEFAULT_STRATEGY_CONFIG } from '../../../config/strategyConfig'
 import { candle } from './testUtils'
-import type { Candle } from '../../../types/scalpSignal'
+import type { Candle, Zone } from '../../../types/scalpSignal'
 
-const config = { ...DEFAULT_STRATEGY_CONFIG, swingLookback: 5, pullbackMaxBars: 5 }
+const config = { ...DEFAULT_STRATEGY_CONFIG, pullbackMaxBars: 5 }
 
-function consolidation(count: number): Candle[] {
-  return Array.from({ length: count }, (_, i) => candle(i, { open: 100, high: 101, low: 99, close: 100, volume: 100 }))
+function flat(count: number, price: number): Candle[] {
+  return Array.from({ length: count }, (_, i) => candle(i, { open: price, high: price + 1, low: price - 1, close: price }))
 }
 
-describe('findRecentBreakout', () => {
-  it('finds a long breakout above the recent swing high', () => {
-    const candles = [...consolidation(5), candle(5, { open: 100, high: 105, low: 100, close: 104, volume: 120 })]
-    const breakout = findRecentBreakout(candles, config, 'long')
-    expect(breakout).not.toBeNull()
-    expect(breakout?.direction).toBe('long')
-    expect(breakout?.level).toBeCloseTo(101)
-    expect(breakout?.breakoutIndex).toBe(5)
+describe('findSetupCandidate — ZONE_REACTION', () => {
+  const support: Zone = { kind: 'support', low: 99, high: 100.5, touches: 2, lastTouchIndex: 3 }
+
+  it('finds a long zone reaction when price has touched a significant support zone recently', () => {
+    const candles = [
+      ...flat(6, 105),
+      candle(6, { open: 104, high: 104.5, low: 100, close: 103 }), // touches the support zone
+      candle(7, { open: 103, high: 105, low: 99.5, close: 104.5 }), // reaction candle
+    ]
+    const result = findSetupCandidate(candles, [support], 'long', config)
+    expect(result).not.toBeNull()
+    expect(result?.setupType).toBe('ZONE_REACTION')
+    expect(result?.zone).toBe(support)
+    expect(result?.triggerIndex).toBe(6)
+    expect(result?.reactionIndex).toBe(7)
   })
 
-  it('finds a short breakout below the recent swing low', () => {
-    const candles = [...consolidation(5), candle(5, { open: 100, high: 100, low: 95, close: 96, volume: 120 })]
-    const breakout = findRecentBreakout(candles, config, 'short')
-    expect(breakout).not.toBeNull()
-    expect(breakout?.direction).toBe('short')
-    expect(breakout?.level).toBeCloseTo(99)
-  })
-
-  it('returns null when price stays inside the range', () => {
-    const candles = consolidation(10)
-    expect(findRecentBreakout(candles, config, 'long')).toBeNull()
-  })
-
-  it('ignores a breakout that happened too long ago', () => {
-    const old = [...consolidation(5), candle(5, { open: 100, high: 105, low: 100, close: 104, volume: 120 })]
-    const stale = [...old, ...consolidation(10).map((c, i) => candle(6 + i, { ...c, close: 100 }))]
-    expect(findRecentBreakout(stale, config, 'long')).toBeNull()
+  it('returns null when price never touched any relevant zone', () => {
+    const candles = flat(8, 105)
+    expect(findSetupCandidate(candles, [support], 'long', config)).toBeNull()
   })
 })
 
-describe('detectPullback', () => {
-  it('confirms a pullback that retests the level and holds', () => {
+describe('findSetupCandidate — BREAKOUT_PULLBACK_RETEST', () => {
+  const resistance: Zone = { kind: 'resistance', low: 100, high: 101, touches: 2, lastTouchIndex: 3 }
+
+  it('finds a long breakout+pullback+retest once a broken resistance zone is retested', () => {
     const candles = [
-      ...consolidation(5),
-      candle(5, { open: 100, high: 105, low: 100, close: 104, volume: 120 }), // breakout, level=101
-      candle(6, { open: 101, high: 102.3, low: 99.5, close: 102, volume: 140 }), // retest + hold
+      ...flat(5, 99),
+      candle(5, { open: 100, high: 103.5, low: 99.8, close: 103 }), // breaks above the resistance zone
+      candle(6, { open: 103, high: 103.2, low: 100.3, close: 101.5 }), // pulls back and retests the zone
+      candle(7, { open: 101.5, high: 104, low: 101, close: 103.5 }), // reaction candle
     ]
-    const breakout = findRecentBreakout(candles, config, 'long')!
-    const pullback = detectPullback(candles, breakout)
-    expect(pullback.confirmed).toBe(true)
-    expect(pullback.pullbackIndex).toBe(6)
+    const result = findSetupCandidate(candles, [resistance], 'long', config)
+    expect(result).not.toBeNull()
+    expect(result?.setupType).toBe('BREAKOUT_PULLBACK_RETEST')
+    expect(result?.triggerIndex).toBe(5)
+    expect(result?.reactionIndex).toBe(7)
   })
 
-  it('does not confirm when price never retests the level', () => {
+  it('returns null when the broken zone was never retested', () => {
     const candles = [
-      ...consolidation(5),
-      candle(5, { open: 100, high: 105, low: 100, close: 104, volume: 120 }),
-      candle(6, { open: 104, high: 106, low: 103.5, close: 105, volume: 100 }),
+      ...flat(5, 99),
+      candle(5, { open: 100, high: 103.5, low: 99.8, close: 103 }),
+      candle(6, { open: 103, high: 105, low: 102.5, close: 104 }), // keeps running, never comes back
+      candle(7, { open: 104, high: 106, low: 103.5, close: 105 }),
     ]
-    const breakout = findRecentBreakout(candles, config, 'long')!
-    const pullback = detectPullback(candles, breakout)
-    expect(pullback.confirmed).toBe(false)
+    expect(findSetupCandidate(candles, [resistance], 'long', config)).toBeNull()
   })
 
-  it('does not confirm when the level fails to hold on the retest', () => {
+  it('prefers ZONE_REACTION over BREAKOUT_PULLBACK_RETEST when both could apply', () => {
+    const support: Zone = { kind: 'support', low: 99, high: 100.5, touches: 2, lastTouchIndex: 3 }
     const candles = [
-      ...consolidation(5),
-      candle(5, { open: 100, high: 105, low: 100, close: 104, volume: 120 }),
-      candle(6, { open: 101, high: 101.5, low: 98, close: 99, volume: 100 }), // closes back below the level
+      ...flat(5, 99),
+      candle(5, { open: 100, high: 103.5, low: 99.8, close: 103 }),
+      candle(6, { open: 103, high: 103.2, low: 100.3, close: 101.5 }),
+      candle(7, { open: 101.5, high: 104, low: 100, close: 103.5 }), // also sits inside the support zone
     ]
-    const breakout = findRecentBreakout(candles, config, 'long')!
-    const pullback = detectPullback(candles, breakout)
-    expect(pullback.confirmed).toBe(false)
+    const result = findSetupCandidate(candles, [support, resistance], 'long', config)
+    expect(result?.setupType).toBe('ZONE_REACTION')
+  })
+})
+
+describe('nextTargetZone', () => {
+  it('picks the nearest resistance ahead for a long, and support ahead for a short', () => {
+    const support: Zone = { kind: 'support', low: 90, high: 91, touches: 2, lastTouchIndex: 1 }
+    const resistance: Zone = { kind: 'resistance', low: 110, high: 111, touches: 2, lastTouchIndex: 2 }
+    expect(nextTargetZone([support, resistance], 100, 'long')).toBe(resistance)
+    expect(nextTargetZone([support, resistance], 100, 'short')).toBe(support)
   })
 })

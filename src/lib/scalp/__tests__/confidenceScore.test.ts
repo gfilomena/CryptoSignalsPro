@@ -2,18 +2,22 @@ import { describe, expect, it } from 'vitest'
 import { calculateConfidenceScore } from '../confidenceScore'
 import { DEFAULT_STRATEGY_CONFIG } from '../../../config/strategyConfig'
 import type { RegimeResult } from '../regime'
-import type { RiskCalc, ScalpSetup } from '../../../types/scalpSignal'
+import type { RiskCalc, ScalpSetup, Zone } from '../../../types/scalpSignal'
 
 const config = DEFAULT_STRATEGY_CONFIG
+
+const zone: Zone = { kind: 'support', low: 98, high: 99.5, touches: 2, lastTouchIndex: 3 }
 
 function setup(overrides: Partial<ScalpSetup> = {}): ScalpSetup {
   return {
     symbol: 'BTC',
     direction: 'long',
     regime: 'bullish',
+    setupType: 'ZONE_REACTION',
+    zone,
     breakout: { direction: 'long', level: 100, breakoutIndex: 5, breakoutClose: 100.5 },
     pullback: { confirmed: true, pullbackIndex: 6, retestPrice: 99.8 },
-    confirmation: { confirmed: true, candlestickRejection: true, volumeConfirmed: true, rsiConfirmed: true, macdConfirmed: true },
+    confirmation: { confirmed: true, candlestickRejection: true, reclaimClose: true, volumeConfirmed: true, rsiConfirmed: true, macdConfirmed: true },
     entryPrice: 100,
     stopCandidate: 98,
     atr: 1,
@@ -26,7 +30,7 @@ function setup(overrides: Partial<ScalpSetup> = {}): ScalpSetup {
   }
 }
 
-const regime: RegimeResult = { regime: 'bullish', price: 100, ema20: 100, ema50: 99, ema200: 95, ema20Slope: 1, ema50Slope: 0.5 }
+const regime: RegimeResult = { regime: 'bullish', price: 100, ema20: 100, ema50: 99, ema200: 95, ema20Slope: 1, ema50Slope: 0.5, structure: 'bullish' }
 
 const validRisk: RiskCalc = {
   valid: true,

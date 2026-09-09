@@ -1,18 +1,14 @@
 import { calculateMACD, calculateRSI } from '../indicators'
-import type { Candle, ConfirmationInfo, PullbackInfo, TradeDirection } from '../../types/scalpSignal'
+import type { Candle, ConfirmationInfo, TradeDirection, Zone } from '../../types/scalpSignal'
 import type { StrategyConfig } from '../../config/strategyConfig'
 
 /**
- * We never enter on the breakout candle alone. After a confirmed pullback, at least two of
- * {candlestick rejection, volume spike, healthy RSI, MACD alignment} must agree with the trade
- * direction before the setup is considered confirmed.
+ * The only mandatory gate is price structure: the most recent candle must show a rejection wick
+ * against the zone and close back beyond it (reclaim for a long, breakdown for a short). RSI,
+ * MACD and volume are deliberately secondary — they can never create a signal on their own, only
+ * add confidence to a structurally confirmed setup (prudent-mode philosophy).
  */
-export function detectConfirmation(
-  candles: Candle[],
-  pullback: PullbackInfo,
-  direction: TradeDirection,
-  config: StrategyConfig,
-): ConfirmationInfo {
+export function detectConfirmation(candles: Candle[], zone: Zone, direction: TradeDirection, config: StrategyConfig): ConfirmationInfo {
   const last = candles[candles.length - 1]
 
   const body = Math.abs(last.close - last.open)
@@ -21,6 +17,10 @@ export function detectConfirmation(
   const candlestickRejection =
     direction === 'long' ? lowerWick > body && last.close >= last.open : upperWick > body && last.close <= last.open
 
+  const reclaimLevel = direction === 'long' ? zone.high : zone.low
+  const reclaimClose = direction === 'long' ? last.close > reclaimLevel : last.close < reclaimLevel
+
+  // Secondary boosters — informational only, never part of the mandatory gate below.
   const recentVolumes = candles.slice(-config.swingLookback).map((c) => c.volume)
   const avgVolume = recentVolumes.reduce((a, b) => a + b, 0) / (recentVolumes.length || 1)
   const volumeConfirmed = avgVolume > 0 && last.volume >= avgVolume * config.volumeConfirmMult
@@ -32,8 +32,12 @@ export function detectConfirmation(
   const macd = calculateMACD(closes)
   const macdConfirmed = direction === 'long' ? macd.histogram > 0 : macd.histogram < 0
 
-  const confirmedCount = [candlestickRejection, volumeConfirmed, rsiConfirmed, macdConfirmed].filter(Boolean).length
-  const confirmed = pullback.confirmed && confirmedCount >= 2
-
-  return { confirmed, candlestickRejection, volumeConfirmed, rsiConfirmed, macdConfirmed }
+  return {
+    confirmed: candlestickRejection && reclaimClose,
+    candlestickRejection,
+    reclaimClose,
+    volumeConfirmed,
+    rsiConfirmed,
+    macdConfirmed,
+  }
 }

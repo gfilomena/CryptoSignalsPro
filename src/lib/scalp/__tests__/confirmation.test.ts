@@ -2,40 +2,55 @@ import { describe, expect, it } from 'vitest'
 import { detectConfirmation } from '../confirmation'
 import { DEFAULT_STRATEGY_CONFIG } from '../../../config/strategyConfig'
 import { candle, candlesFromCloses } from './testUtils'
-import type { Candle, PullbackInfo } from '../../../types/scalpSignal'
+import type { Candle, Zone } from '../../../types/scalpSignal'
 
 const config = { ...DEFAULT_STRATEGY_CONFIG, swingLookback: 5, rsiPeriod: 5 }
 
-const confirmedPullback: PullbackInfo = { confirmed: true, pullbackIndex: 6, retestPrice: 99.5 }
-const unconfirmedPullback: PullbackInfo = { confirmed: false, pullbackIndex: -1, retestPrice: 0 }
+const supportZone: Zone = { kind: 'support', low: 99, high: 100.5, touches: 2, lastTouchIndex: 3 }
 
 function baseCandles(): Candle[] {
   return [
     ...candlesFromCloses([100, 100, 100, 100, 100, 100]),
-    // strong lower-wick rejection + volume spike on the last (confirmation) candle
+    // strong lower-wick rejection that reclaims back above the zone's top edge
     candle(6, { open: 101, high: 102.3, low: 99.5, close: 102, volume: 140 }),
   ]
 }
 
 describe('detectConfirmation', () => {
-  it('confirms a long setup when at least 2 signals agree (rejection + volume)', () => {
-    const result = detectConfirmation(baseCandles(), confirmedPullback, 'long', config)
+  it('confirms a long setup on rejection + reclaim close beyond the zone', () => {
+    const result = detectConfirmation(baseCandles(), supportZone, 'long', config)
     expect(result.candlestickRejection).toBe(true)
-    expect(result.volumeConfirmed).toBe(true)
+    expect(result.reclaimClose).toBe(true)
     expect(result.confirmed).toBe(true)
   })
 
-  it('never confirms without a confirmed pullback, however strong the candle', () => {
-    const result = detectConfirmation(baseCandles(), unconfirmedPullback, 'long', config)
+  it('never confirms without a reclaim close, however strong the rejection wick', () => {
+    const notReclaimedYet: Zone = { ...supportZone, high: 103 } // close (102) is still below this
+    const result = detectConfirmation(baseCandles(), notReclaimedYet, 'long', config)
+    expect(result.candlestickRejection).toBe(true)
+    expect(result.reclaimClose).toBe(false)
     expect(result.confirmed).toBe(false)
   })
 
-  it('does not confirm on a single weak signal alone (no chasing the breakout candle)', () => {
+  it('does not confirm on a weak candle with no rejection wick, even if volume is secondary-confirmed', () => {
     const weak = [
       ...candlesFromCloses([100, 100, 100, 100, 100, 100]),
-      candle(6, { open: 100, high: 100.5, low: 99.9, close: 100.2, volume: 101 }),
+      candle(6, { open: 100, high: 100.5, low: 99.9, close: 100.2, volume: 200 }),
     ]
-    const result = detectConfirmation(weak, confirmedPullback, 'long', config)
+    const result = detectConfirmation(weak, supportZone, 'long', config)
+    expect(result.candlestickRejection).toBe(false)
     expect(result.confirmed).toBe(false)
+  })
+
+  it('RSI/MACD/volume never gate the signal alone — only the structural rejection+reclaim does', () => {
+    // Rejection + reclaim both true, but volume is below average and RSI/MACD may or may not
+    // align — confirmed must stay true regardless (secondary signals are informational only).
+    const lowVolume = [
+      ...candlesFromCloses([100, 100, 100, 100, 100, 100], [500, 500, 500, 500, 500, 500]),
+      candle(6, { open: 101, high: 102.3, low: 99.5, close: 102, volume: 1 }),
+    ]
+    const result = detectConfirmation(lowVolume, supportZone, 'long', config)
+    expect(result.volumeConfirmed).toBe(false)
+    expect(result.confirmed).toBe(true)
   })
 })

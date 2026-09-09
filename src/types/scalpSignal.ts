@@ -2,6 +2,7 @@ import type { Currency } from './domain'
 
 export type MarketRegime = 'bullish' | 'bearish' | 'neutral'
 export type TradeDirection = 'long' | 'short'
+export type SetupType = 'ZONE_REACTION' | 'BREAKOUT_PULLBACK_RETEST'
 
 export type SignalState =
   | 'NO_TRADE'
@@ -25,6 +26,18 @@ export interface Candle {
   closeTime: number
 }
 
+/** A historically significant support/resistance band on the structure timeframe (1H): a price
+ * range, not a single price, built from clustered swing pivots that were tested more than once. */
+export interface Zone {
+  kind: 'support' | 'resistance'
+  low: number
+  high: number
+  touches: number
+  lastTouchIndex: number
+}
+
+/** `level`/`breakoutIndex` describe the zone edge the setup pivots on: for ZONE_REACTION it's the
+ * candle that first touched the zone; for BREAKOUT_PULLBACK_RETEST it's the candle that broke it. */
 export interface BreakoutInfo {
   direction: TradeDirection
   level: number
@@ -32,6 +45,7 @@ export interface BreakoutInfo {
   breakoutClose: number
 }
 
+/** `pullbackIndex` is the most recent candle — the one evaluated for rejection + reclaim. */
 export interface PullbackInfo {
   confirmed: boolean
   pullbackIndex: number
@@ -39,8 +53,11 @@ export interface PullbackInfo {
 }
 
 export interface ConfirmationInfo {
+  /** The only mandatory gate: a rejection candle that closes back beyond the zone. */
   confirmed: boolean
   candlestickRejection: boolean
+  reclaimClose: boolean
+  /** Secondary/optional boosters — never gate a signal alone, only feed the quality score. */
   volumeConfirmed: boolean
   rsiConfirmed: boolean
   macdConfirmed: boolean
@@ -51,6 +68,8 @@ export interface ScalpSetup {
   symbol: string
   direction: TradeDirection
   regime: MarketRegime
+  setupType: SetupType
+  zone: Zone
   breakout: BreakoutInfo
   pullback: PullbackInfo
   confirmation: ConfirmationInfo
@@ -135,6 +154,8 @@ export interface SignalSnapshot {
   confidence: ConfidenceBreakdown | null
   dailyRisk: DailyRiskStatus
   lastAlert: AlertEvent | null
+  /** Read-only market context (e.g. whale flow) — never drives state/score, display only. */
+  whaleContext?: 'bullish' | 'bearish' | null
   updatedAt: number
 }
 

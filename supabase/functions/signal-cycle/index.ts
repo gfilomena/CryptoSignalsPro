@@ -4,6 +4,11 @@
 // pattern already used by bot-cycle for the indicator math). Writes the resulting state/alerts/
 // paper trades to Postgres and sends Web Push notifications on every alert-worthy state change.
 // This function NEVER places a real order — it only computes signals and records paper trades.
+//
+// Prudent-mode engine: regime (trend timeframe) -> significant S/R zones (structure timeframe) ->
+// price reaction/structure (entry timeframe) -> mandatory rejection+reclaim confirmation. RSI/
+// MACD/volume are secondary boosters only, never a standalone trigger. NO_TRADE is the default
+// and expected outcome most of the time.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
@@ -89,10 +94,12 @@ async function fetchCandles(pair: string, interval: string, limit: number): Prom
 // ---------------------------------------------------------------------------
 interface StrategyConfig {
   symbols: { symbol: string; name: string; pair: string; enabled: boolean }[];
-  trendTimeframe: string; entryTimeframe: string;
-  emaFast: number; emaMedium: number; emaSlow: number; rsiPeriod: number; atrPeriod: number;
+  trendTimeframe: string; structureTimeframe: string; entryTimeframe: string;
+  emaFast: number; emaMedium: number; emaSlow: number; structureSwingLookback: number;
+  rsiPeriod: number; atrPeriod: number;
   swingLookback: number; pullbackMaxBars: number; volumeConfirmMult: number;
   maxStopAtr: number; atrStopBufferMult: number;
+  zoneLookback: number; zonePivotWindow: number; zoneMinTouches: number; zoneClusterPct: number;
   capital: number; capitalCurrency: string; riskPerTradePct: number; minRiskReward: number;
   maxDailyLossR: number; maxTradesPerDay: number; minSignalConfidence: number;
   confidenceWeights: { trendAlignment: number; breakoutQuality: number; pullbackQuality: number; volume: number; rsi: number; macd: number; volatility: number; riskReward: number };
@@ -100,16 +107,32 @@ interface StrategyConfig {
   tradingCosts: { feePct: number; spreadPct: number; slippagePct: number };
 }
 
+const PUSH_ALERT_TYPES = ["ENTRY_CONFIRMED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
+
 // ---------------------------------------------------------------------------
-// Market regime (ported from src/lib/scalp/regime.ts)
+// Market regime with swing structure (ported from src/lib/scalp/regime.ts)
 // ---------------------------------------------------------------------------
 type MarketRegime = "bullish" | "bearish" | "neutral";
-interface RegimeResult { regime: MarketRegime; price: number; ema20: number; ema50: number; ema200: number; ema20Slope: number; ema50Slope: number }
+type SwingStructure = "bullish" | "bearish" | "neutral";
+interface RegimeResult { regime: MarketRegime; price: number; ema20: number; ema50: number; ema200: number; ema20Slope: number; ema50Slope: number; structure: SwingStructure }
+
+function detectSwingStructure(candles: Candle[], lookback: number): SwingStructure {
+  if (candles.length < lookback * 2) return "neutral";
+  const older = candles.slice(-lookback * 2, -lookback);
+  const newer = candles.slice(-lookback);
+  const olderHigh = Math.max(...older.map((c) => c.high));
+  const olderLow = Math.min(...older.map((c) => c.low));
+  const newerHigh = Math.max(...newer.map((c) => c.high));
+  const newerLow = Math.min(...newer.map((c) => c.low));
+  if (newerHigh > olderHigh && newerLow > olderLow) return "bullish";
+  if (newerHigh < olderHigh && newerLow < olderLow) return "bearish";
+  return "neutral";
+}
 
 function detectRegime(candles: Candle[], config: StrategyConfig): RegimeResult {
   const closes = candles.map((c) => c.close);
   if (closes.length < config.emaSlow + 2) {
-    return { regime: "neutral", price: closes[closes.length - 1] ?? 0, ema20: 0, ema50: 0, ema200: 0, ema20Slope: 0, ema50Slope: 0 };
+    return { regime: "neutral", price: closes[closes.length - 1] ?? 0, ema20: 0, ema50: 0, ema200: 0, ema20Slope: 0, ema50Slope: 0, structure: "neutral" };
   }
   const price = closes[closes.length - 1];
   const prevCloses = closes.slice(0, -1);
@@ -117,62 +140,129 @@ function detectRegime(candles: Candle[], config: StrategyConfig): RegimeResult {
   const ema50 = calculateEMA(closes, config.emaMedium), ema50Prev = calculateEMA(prevCloses, config.emaMedium);
   const ema200 = calculateEMA(closes, config.emaSlow);
   const ema20Slope = ema20 - ema20Prev, ema50Slope = ema50 - ema50Prev;
-  const bullish = price > ema200 && ema20 > ema50 && ema20Slope > 0 && ema50Slope > 0;
-  const bearish = price < ema200 && ema20 < ema50 && ema20Slope < 0 && ema50Slope < 0;
-  return { regime: bullish ? "bullish" : bearish ? "bearish" : "neutral", price, ema20, ema50, ema200, ema20Slope, ema50Slope };
+  const structure = detectSwingStructure(candles, config.structureSwingLookback);
+  const emaBullish = price > ema200 && ema20 > ema50 && ema20Slope > 0 && ema50Slope > 0;
+  const emaBearish = price < ema200 && ema20 < ema50 && ema20Slope < 0 && ema50Slope < 0;
+  const bullish = emaBullish && structure === "bullish";
+  const bearish = emaBearish && structure === "bearish";
+  return { regime: bullish ? "bullish" : bearish ? "bearish" : "neutral", price, ema20, ema50, ema200, ema20Slope, ema50Slope, structure };
 }
 
 // ---------------------------------------------------------------------------
-// Breakout / pullback / confirmation (ported from levels.ts + confirmation.ts)
+// Support/resistance zones (ported from src/lib/scalp/zones.ts)
+// ---------------------------------------------------------------------------
+interface Zone { kind: "support" | "resistance"; low: number; high: number; touches: number; lastTouchIndex: number }
+interface Pivot { index: number; price: number }
+
+function findPivots(candles: Candle[], window: number): { highs: Pivot[]; lows: Pivot[] } {
+  const highs: Pivot[] = [], lows: Pivot[] = [];
+  for (let i = window; i < candles.length - window; i++) {
+    const slice = candles.slice(i - window, i + window + 1);
+    const high = candles[i].high, low = candles[i].low;
+    if (high === Math.max(...slice.map((c) => c.high))) highs.push({ index: i, price: high });
+    if (low === Math.min(...slice.map((c) => c.low))) lows.push({ index: i, price: low });
+  }
+  return { highs, lows };
+}
+
+function clusterPivots(pivots: Pivot[], clusterPct: number): Pivot[][] {
+  if (pivots.length === 0) return [];
+  const sorted = [...pivots].sort((a, b) => a.price - b.price);
+  const clusters: Pivot[][] = [[sorted[0]]];
+  for (let i = 1; i < sorted.length; i++) {
+    const current = sorted[i];
+    const cluster = clusters[clusters.length - 1];
+    const tolerance = cluster[0].price * (clusterPct / 100);
+    if (current.price - cluster[cluster.length - 1].price <= tolerance) cluster.push(current);
+    else clusters.push([current]);
+  }
+  return clusters;
+}
+
+function detectZones(candles: Candle[], config: StrategyConfig): Zone[] {
+  const recent = candles.slice(-config.zoneLookback);
+  const { highs, lows } = findPivots(recent, config.zonePivotWindow);
+  const toZones = (clusters: Pivot[][], kind: Zone["kind"]): Zone[] =>
+    clusters.filter((c) => c.length >= config.zoneMinTouches).map((c) => ({
+      kind, low: Math.min(...c.map((p) => p.price)), high: Math.max(...c.map((p) => p.price)),
+      touches: c.length, lastTouchIndex: Math.max(...c.map((p) => p.index)),
+    }));
+  const resistances = toZones(clusterPivots(highs, config.zoneClusterPct), "resistance");
+  const supports = toZones(clusterPivots(lows, config.zoneClusterPct), "support");
+  return [...supports, ...resistances].sort((a, b) => b.lastTouchIndex - a.lastTouchIndex);
+}
+
+function priceInZone(zone: Zone, price: number): boolean { return price >= zone.low && price <= zone.high; }
+function priceBrokeZone(zone: Zone, price: number, direction: "long" | "short"): boolean {
+  return direction === "long" ? price > zone.high : price < zone.low;
+}
+function nearestZoneAhead(zones: Zone[], kind: Zone["kind"], price: number, direction: "long" | "short"): Zone | null {
+  const candidates = zones.filter((z) => z.kind === kind && (direction === "long" ? z.low > price : z.high < price));
+  if (candidates.length === 0) return null;
+  return candidates.reduce((closest, z) => {
+    const dist = direction === "long" ? z.low - price : price - z.high;
+    const closestDist = direction === "long" ? closest.low - price : price - closest.high;
+    return dist < closestDist ? z : closest;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Setup detection: ZONE_REACTION / BREAKOUT_PULLBACK_RETEST (ported from levels.ts)
 // ---------------------------------------------------------------------------
 type TradeDirection = "long" | "short";
-interface BreakoutInfo { direction: TradeDirection; level: number; breakoutIndex: number; breakoutClose: number }
-interface PullbackInfo { confirmed: boolean; pullbackIndex: number; retestPrice: number }
-interface ConfirmationInfo { confirmed: boolean; candlestickRejection: boolean; volumeConfirmed: boolean; rsiConfirmed: boolean; macdConfirmed: boolean }
+type SetupType = "ZONE_REACTION" | "BREAKOUT_PULLBACK_RETEST";
+interface SetupCandidate { setupType: SetupType; zone: Zone; triggerIndex: number; reactionIndex: number }
 
-function findRecentBreakout(candles: Candle[], config: StrategyConfig, direction: TradeDirection): BreakoutInfo | null {
-  const { swingLookback, pullbackMaxBars } = config;
-  const n = candles.length;
-  if (n < swingLookback + 1) return null;
-  const searchStart = n - 1;
-  const searchEnd = Math.max(swingLookback, n - 1 - pullbackMaxBars);
-  for (let i = searchStart; i >= searchEnd; i--) {
-    const window = candles.slice(i - swingLookback, i);
-    if (window.length < swingLookback) continue;
-    const c = candles[i];
-    if (direction === "long") {
-      const swingHigh = Math.max(...window.map((w) => w.high));
-      if (c.close > swingHigh) return { direction: "long", level: swingHigh, breakoutIndex: i, breakoutClose: c.close };
-    } else {
-      const swingLow = Math.min(...window.map((w) => w.low));
-      if (c.close < swingLow) return { direction: "short", level: swingLow, breakoutIndex: i, breakoutClose: c.close };
-    }
+function findZoneReaction(candles: Candle[], zones: Zone[], direction: TradeDirection, config: StrategyConfig): SetupCandidate | null {
+  const window = candles.slice(-(config.pullbackMaxBars + 1));
+  if (window.length < 2) return null;
+  const kind: Zone["kind"] = direction === "long" ? "support" : "resistance";
+  for (const zone of zones.filter((z) => z.kind === kind)) {
+    const touchOffset = window.findIndex((c) => priceInZone(zone, direction === "long" ? c.low : c.high));
+    if (touchOffset === -1) continue;
+    return { setupType: "ZONE_REACTION", zone, triggerIndex: candles.length - window.length + touchOffset, reactionIndex: candles.length - 1 };
   }
   return null;
 }
 
-function detectPullback(candles: Candle[], breakout: BreakoutInfo): PullbackInfo {
-  const after = candles.slice(breakout.breakoutIndex + 1);
-  if (after.length === 0) return { confirmed: false, pullbackIndex: -1, retestPrice: 0 };
-  const level = breakout.level;
-  let pullbackIndex = -1, retestPrice = 0;
-  for (let j = 0; j < after.length; j++) {
-    const c = after[j];
-    if (breakout.direction === "long" && c.low <= level) { pullbackIndex = breakout.breakoutIndex + 1 + j; retestPrice = c.low; }
-    else if (breakout.direction === "short" && c.high >= level) { pullbackIndex = breakout.breakoutIndex + 1 + j; retestPrice = c.high; }
+function findBreakoutPullbackRetest(candles: Candle[], zones: Zone[], direction: TradeDirection, config: StrategyConfig): SetupCandidate | null {
+  const window = candles.slice(-(config.pullbackMaxBars + 2));
+  if (window.length < 3) return null;
+  const kind: Zone["kind"] = direction === "long" ? "resistance" : "support";
+  for (const zone of zones.filter((z) => z.kind === kind)) {
+    const breakoutOffset = window.findIndex((c) => priceBrokeZone(zone, c.close, direction));
+    if (breakoutOffset === -1) continue;
+    const breakoutIndex = candles.length - window.length + breakoutOffset;
+    const after = candles.slice(breakoutIndex + 1);
+    if (after.length === 0) continue;
+    const retested = after.some((c) => priceInZone(zone, direction === "long" ? c.low : c.high));
+    if (!retested) continue;
+    return { setupType: "BREAKOUT_PULLBACK_RETEST", zone, triggerIndex: breakoutIndex, reactionIndex: candles.length - 1 };
   }
-  if (pullbackIndex === -1) return { confirmed: false, pullbackIndex: -1, retestPrice: 0 };
-  const last = candles[candles.length - 1];
-  const levelHolds = breakout.direction === "long" ? last.close > level : last.close < level;
-  return { confirmed: levelHolds, pullbackIndex, retestPrice };
+  return null;
 }
 
-function detectConfirmation(candles: Candle[], pullback: PullbackInfo, direction: TradeDirection, config: StrategyConfig): ConfirmationInfo {
+function findSetupCandidate(candles: Candle[], zones: Zone[], direction: TradeDirection, config: StrategyConfig): SetupCandidate | null {
+  return findZoneReaction(candles, zones, direction, config) ?? findBreakoutPullbackRetest(candles, zones, direction, config);
+}
+
+function nextTargetZone(zones: Zone[], entryPrice: number, direction: TradeDirection): Zone | null {
+  return nearestZoneAhead(zones, direction === "long" ? "resistance" : "support", entryPrice, direction);
+}
+
+// ---------------------------------------------------------------------------
+// Confirmation: mandatory rejection+reclaim, secondary RSI/MACD/volume (ported from confirmation.ts)
+// ---------------------------------------------------------------------------
+interface ConfirmationInfo { confirmed: boolean; candlestickRejection: boolean; reclaimClose: boolean; volumeConfirmed: boolean; rsiConfirmed: boolean; macdConfirmed: boolean }
+
+function detectConfirmation(candles: Candle[], zone: Zone, direction: TradeDirection, config: StrategyConfig): ConfirmationInfo {
   const last = candles[candles.length - 1];
   const body = Math.abs(last.close - last.open);
   const lowerWick = Math.min(last.open, last.close) - last.low;
   const upperWick = last.high - Math.max(last.open, last.close);
   const candlestickRejection = direction === "long" ? lowerWick > body && last.close >= last.open : upperWick > body && last.close <= last.open;
+  const reclaimLevel = direction === "long" ? zone.high : zone.low;
+  const reclaimClose = direction === "long" ? last.close > reclaimLevel : last.close < reclaimLevel;
   const recentVolumes = candles.slice(-config.swingLookback).map((c) => c.volume);
   const avgVolume = recentVolumes.reduce((a, b) => a + b, 0) / (recentVolumes.length || 1);
   const volumeConfirmed = avgVolume > 0 && last.volume >= avgVolume * config.volumeConfirmMult;
@@ -181,39 +271,46 @@ function detectConfirmation(candles: Candle[], pullback: PullbackInfo, direction
   const rsiConfirmed = direction === "long" ? rsi > 45 && rsi < 78 : rsi < 55 && rsi > 22;
   const macd = calculateMACD(closes);
   const macdConfirmed = direction === "long" ? macd.histogram > 0 : macd.histogram < 0;
-  const confirmedCount = [candlestickRejection, volumeConfirmed, rsiConfirmed, macdConfirmed].filter(Boolean).length;
-  return { confirmed: pullback.confirmed && confirmedCount >= 2, candlestickRejection, volumeConfirmed, rsiConfirmed, macdConfirmed };
+  return { confirmed: candlestickRejection && reclaimClose, candlestickRejection, reclaimClose, volumeConfirmed, rsiConfirmed, macdConfirmed };
 }
 
 // ---------------------------------------------------------------------------
 // Strategy engine orchestrator (ported from strategyEngine.ts)
 // ---------------------------------------------------------------------------
 interface ScalpSetup {
-  symbol: string; direction: TradeDirection; regime: MarketRegime;
-  breakout: BreakoutInfo; pullback: PullbackInfo; confirmation: ConfirmationInfo;
+  symbol: string; direction: TradeDirection; regime: MarketRegime; setupType: SetupType; zone: Zone;
+  breakout: { direction: TradeDirection; level: number; breakoutIndex: number; breakoutClose: number };
+  pullback: { confirmed: boolean; pullbackIndex: number; retestPrice: number };
+  confirmation: ConfirmationInfo;
   entryPrice: number; stopCandidate: number; atr: number; atrPct: number;
   rsi: number; macdHistogram: number; volumeRatio: number; timestamp: number;
 }
 
-function evaluateSetup(symbol: string, trendCandles: Candle[], entryCandles: Candle[], config: StrategyConfig) {
+function evaluateSetup(symbol: string, trendCandles: Candle[], structureCandles: Candle[], entryCandles: Candle[], config: StrategyConfig) {
   const reasons: string[] = [];
   const regimeDetail = detectRegime(trendCandles, config);
-  if (regimeDetail.regime === "neutral") { reasons.push("regime_neutral"); return { setup: null as ScalpSetup | null, regime: "neutral" as MarketRegime, regimeDetail, reasons }; }
+  if (regimeDetail.regime === "neutral") {
+    reasons.push("regime_range");
+    return { setup: null as ScalpSetup | null, regime: "neutral" as MarketRegime, regimeDetail, zones: [] as Zone[], reasons };
+  }
   const direction: TradeDirection = regimeDetail.regime === "bullish" ? "long" : "short";
-  reasons.push(regimeDetail.regime === "bullish" ? "trend_15m_bullish" : "trend_15m_bearish");
-  if (entryCandles.length < config.swingLookback + 2) { reasons.push("insufficient_entry_data"); return { setup: null, regime: regimeDetail.regime, regimeDetail, reasons }; }
-  const breakout = findRecentBreakout(entryCandles, config, direction);
-  if (!breakout) { reasons.push("no_breakout"); return { setup: null, regime: regimeDetail.regime, regimeDetail, reasons }; }
-  reasons.push("breakout_detected");
-  const pullback = detectPullback(entryCandles, breakout);
-  if (!pullback.confirmed) { reasons.push("pullback_not_confirmed"); return { setup: null, regime: regimeDetail.regime, regimeDetail, reasons }; }
-  reasons.push("pullback_confirmed");
-  const confirmation = detectConfirmation(entryCandles, pullback, direction, config);
-  if (!confirmation.confirmed) reasons.push("confirmation_missing");
-  if (confirmation.candlestickRejection) reasons.push("candlestick_confirmation");
+  reasons.push(regimeDetail.regime === "bullish" ? "trend_4h_bullish" : "trend_4h_bearish");
+
+  const zones = detectZones(structureCandles, config);
+  if (zones.length === 0) { reasons.push("no_significant_zones"); return { setup: null, regime: regimeDetail.regime, regimeDetail, zones, reasons }; }
+
+  if (entryCandles.length < config.pullbackMaxBars + 3) { reasons.push("insufficient_entry_data"); return { setup: null, regime: regimeDetail.regime, regimeDetail, zones, reasons }; }
+
+  const candidate = findSetupCandidate(entryCandles, zones, direction, config);
+  if (!candidate) { reasons.push("no_structure_setup"); return { setup: null, regime: regimeDetail.regime, regimeDetail, zones, reasons }; }
+  reasons.push(candidate.setupType === "ZONE_REACTION" ? "zone_reaction_detected" : "breakout_pullback_retest_detected");
+
+  const confirmation = detectConfirmation(entryCandles, candidate.zone, direction, config);
+  if (!confirmation.confirmed) reasons.push("confirmation_missing"); else reasons.push("rejection_and_reclaim_confirmed");
   if (confirmation.volumeConfirmed) reasons.push("volume_confirmation");
   if (confirmation.rsiConfirmed) reasons.push("rsi_healthy");
   if (confirmation.macdConfirmed) reasons.push(direction === "long" ? "macd_bullish" : "macd_bearish");
+
   const last = entryCandles[entryCandles.length - 1];
   const closes = entryCandles.map((c) => c.close);
   const klineRows = entryCandles.map((c) => [c.openTime, c.open, c.high, c.low, c.close, c.volume]);
@@ -224,16 +321,24 @@ function evaluateSetup(symbol: string, trendCandles: Candle[], entryCandles: Can
   const recentVolumes = entryCandles.slice(-config.swingLookback).map((c) => c.volume);
   const avgVolume = recentVolumes.reduce((a, b) => a + b, 0) / (recentVolumes.length || 1);
   const volumeRatio = avgVolume > 0 ? last.volume / avgVolume : 1;
-  const pullbackLeg = entryCandles.slice(breakout.breakoutIndex + 1, pullback.pullbackIndex + 1);
+
+  const sinceTrigger = entryCandles.slice(candidate.triggerIndex);
   const stopCandidate = direction === "long"
-    ? Math.min(breakout.level, ...pullbackLeg.map((c) => c.low))
-    : Math.max(breakout.level, ...pullbackLeg.map((c) => c.high));
-  const setup: ScalpSetup = { symbol, direction, regime: regimeDetail.regime, breakout, pullback, confirmation, entryPrice: last.close, stopCandidate, atr, atrPct, rsi, macdHistogram: macd.histogram, volumeRatio, timestamp: last.closeTime };
-  return { setup, regime: regimeDetail.regime, regimeDetail, reasons };
+    ? Math.min(candidate.zone.low, ...sinceTrigger.map((c) => c.low))
+    : Math.max(candidate.zone.high, ...sinceTrigger.map((c) => c.high));
+
+  const triggerCandle = entryCandles[candidate.triggerIndex] ?? last;
+  const setup: ScalpSetup = {
+    symbol, direction, regime: regimeDetail.regime, setupType: candidate.setupType, zone: candidate.zone,
+    breakout: { direction, level: direction === "long" ? candidate.zone.high : candidate.zone.low, breakoutIndex: candidate.triggerIndex, breakoutClose: triggerCandle.close },
+    pullback: { confirmed: confirmation.confirmed, pullbackIndex: candidate.reactionIndex, retestPrice: direction === "long" ? last.low : last.high },
+    confirmation, entryPrice: last.close, stopCandidate, atr, atrPct, rsi, macdHistogram: macd.histogram, volumeRatio, timestamp: last.closeTime,
+  };
+  return { setup, regime: regimeDetail.regime, regimeDetail, zones, reasons };
 }
 
 // ---------------------------------------------------------------------------
-// Risk engine (ported from riskEngine.ts)
+// Risk engine: zone-aware take-profit (ported from riskEngine.ts)
 // ---------------------------------------------------------------------------
 interface DailyRiskStatus { locked: boolean; reason?: string; tradesToday: number; lossRToday: number; dayKey: string }
 interface RiskCalc { valid: boolean; reasonInvalid?: string; stopLoss: number; stopDistance: number; riskAmount: number; rewardAmount: number; positionSize: number; takeProfit1: number; takeProfit2: number; riskRewardRatio: number; capitalCurrency: string }
@@ -255,27 +360,47 @@ function invalidRisk(reason: string, config: StrategyConfig): RiskCalc {
   return { valid: false, reasonInvalid: reason, stopLoss: 0, stopDistance: 0, riskAmount: 0, rewardAmount: 0, positionSize: 0, takeProfit1: 0, takeProfit2: 0, riskRewardRatio: 0, capitalCurrency: config.capitalCurrency };
 }
 
-function calculateRisk(setup: ScalpSetup, config: StrategyConfig, dailyRisk: DailyRiskStatus, usdRate = 1): RiskCalc {
+function calculateRisk(setup: ScalpSetup, zones: Zone[], config: StrategyConfig, dailyRisk: DailyRiskStatus, usdRate = 1): RiskCalc {
   if (dailyRisk.locked) return invalidRisk("DAILY_LOCKED", config);
   if (dailyRisk.tradesToday >= config.maxTradesPerDay) return invalidRisk("MAX_TRADES_REACHED", config);
   if (config.minRiskReward < 1) return invalidRisk("RR_TOO_LOW", config);
+
   const rawStopDistance = setup.direction === "long" ? setup.entryPrice - setup.stopCandidate : setup.stopCandidate - setup.entryPrice;
   const atrBuffer = setup.atr * config.atrStopBufferMult;
   const stopDistance = Math.max(rawStopDistance, 0) + atrBuffer;
   if (stopDistance <= 0 || (setup.atr > 0 && stopDistance > setup.atr * config.maxStopAtr)) return invalidRisk("STOP_TOO_WIDE", config);
   const stopLoss = setup.direction === "long" ? setup.entryPrice - stopDistance : setup.entryPrice + stopDistance;
+
+  const target = nextTargetZone(zones, setup.entryPrice, setup.direction);
+  let takeProfit1: number, takeProfit2: number, riskRewardRatio: number;
+
+  if (target) {
+    const targetEdge = setup.direction === "long" ? target.low : target.high;
+    const rewardDistance = setup.direction === "long" ? targetEdge - setup.entryPrice : setup.entryPrice - targetEdge;
+    const rr = rewardDistance / stopDistance;
+    if (rr < config.minRiskReward) return invalidRisk("RR_TOO_LOW", config);
+    const furtherTarget = nextTargetZone(zones, targetEdge, setup.direction);
+    takeProfit1 = targetEdge;
+    takeProfit2 = furtherTarget
+      ? (setup.direction === "long" ? furtherTarget.low : furtherTarget.high)
+      : (setup.direction === "long" ? setup.entryPrice + stopDistance * (config.minRiskReward + 1) : setup.entryPrice - stopDistance * (config.minRiskReward + 1));
+    riskRewardRatio = Math.round(rr * 100) / 100;
+  } else {
+    riskRewardRatio = config.minRiskReward;
+    takeProfit1 = setup.direction === "long" ? setup.entryPrice + stopDistance * riskRewardRatio : setup.entryPrice - stopDistance * riskRewardRatio;
+    takeProfit2 = setup.direction === "long" ? setup.entryPrice + stopDistance * (riskRewardRatio + 1) : setup.entryPrice - stopDistance * (riskRewardRatio + 1);
+  }
+
   const riskAmount = config.capital * (config.riskPerTradePct / 100);
   const riskAmountUsd = usdRate > 0 ? riskAmount / usdRate : riskAmount;
   const positionSize = riskAmountUsd / stopDistance;
-  const riskRewardRatio = config.minRiskReward;
   const rewardAmount = riskAmount * riskRewardRatio;
-  const takeProfit1 = setup.direction === "long" ? setup.entryPrice + stopDistance * riskRewardRatio : setup.entryPrice - stopDistance * riskRewardRatio;
-  const takeProfit2 = setup.direction === "long" ? setup.entryPrice + stopDistance * (riskRewardRatio + 1) : setup.entryPrice - stopDistance * (riskRewardRatio + 1);
   return { valid: true, stopLoss, stopDistance, riskAmount, rewardAmount, positionSize, takeProfit1, takeProfit2, riskRewardRatio, capitalCurrency: config.capitalCurrency };
 }
 
 // ---------------------------------------------------------------------------
-// Confidence score (ported from confidenceScore.ts)
+// Confidence / Setup Quality score (ported from confidenceScore.ts) — diagnostic only, never a
+// standalone probability of success.
 // ---------------------------------------------------------------------------
 function clamp01(x: number): number { return Number.isNaN(x) ? 0 : Math.max(0, Math.min(1, x)); }
 
@@ -306,7 +431,7 @@ function calculateConfidenceScore(setup: ScalpSetup, regimeDetail: RegimeResult,
 }
 
 // ---------------------------------------------------------------------------
-// Signal state machine (ported from signalStateMachine.ts)
+// Signal state machine (ported from signalStateMachine.ts) — unchanged logic
 // ---------------------------------------------------------------------------
 type SignalState = "NO_TRADE" | "WATCH" | "LONG_SETUP" | "LONG_CONFIRMED" | "SHORT_SETUP" | "SHORT_CONFIRMED" | "TRADE_ACTIVE" | "TARGET_HIT" | "STOP_HIT" | "EXPIRED";
 const SETUP_OR_CONFIRMED_STATES: SignalState[] = ["LONG_SETUP", "LONG_CONFIRMED", "SHORT_SETUP", "SHORT_CONFIRMED"];
@@ -336,7 +461,7 @@ function nextSignalState(ctx: {
 }
 
 // ---------------------------------------------------------------------------
-// Alert engine (ported from alertEngine.ts)
+// Alert engine (ported from alertEngine.ts) — unchanged logic
 // ---------------------------------------------------------------------------
 type AlertType = "SETUP_DETECTED" | "ENTRY_CONFIRMED" | "STOP_HIT" | "TP1_HIT" | "TP2_HIT" | "SETUP_INVALIDATED";
 
@@ -385,7 +510,7 @@ function buildAlert(ctx: AlertBuildContext): AlertEvent | null {
 }
 
 // ---------------------------------------------------------------------------
-// Paper trading (ported from paperTrading.ts)
+// Paper trading (ported from paperTrading.ts) — unchanged logic
 // ---------------------------------------------------------------------------
 function openPaperTradeRow(setup: ScalpSetup, risk: RiskCalc, confidence: number, config: StrategyConfig) {
   const costs = config.tradingCosts;
@@ -422,12 +547,16 @@ async function getUsdRate(currency: string): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
-// Web Push
+// Web Push — only for the alert types the user actually wants interrupted by (see
+// PUSH_ALERT_TYPES above); SETUP_DETECTED is still recorded in scalp_alerts for the Signal
+// History but never pushed.
 // ---------------------------------------------------------------------------
 async function sendPushToSubscribers(
   sb: ReturnType<typeof createClient>,
   alert: { type: AlertType; symbol: string; direction: string | null; entryPrice?: number; stopLoss?: number; takeProfit1?: number; takeProfit2?: number; confidence?: number; riskRewardRatio?: number },
 ) {
+  if (!PUSH_ALERT_TYPES.includes(alert.type)) return { sent: 0, reason: "not_push_worthy" };
+
   const vapidPublic = Deno.env.get("VAPID_PUBLIC_KEY");
   const vapidPrivate = Deno.env.get("VAPID_PRIVATE_KEY");
   const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:alerts@cryptosignalspro.app";
@@ -444,7 +573,7 @@ async function sendPushToSubscribers(
   if (alert.entryPrice) bodyParts.push(`Entry ${alert.entryPrice.toFixed(2)}`);
   if (alert.stopLoss) bodyParts.push(`SL ${alert.stopLoss.toFixed(2)}`);
   if (alert.takeProfit1) bodyParts.push(`TP1 ${alert.takeProfit1.toFixed(2)}`);
-  if (alert.confidence) bodyParts.push(`Conf ${alert.confidence}%`);
+  if (alert.confidence) bodyParts.push(`Quality ${alert.confidence}%`);
   const payload = JSON.stringify({ title, body: bodyParts.join(" · "), type: alert.type, symbol: alert.symbol });
 
   let sent = 0;
@@ -456,7 +585,6 @@ async function sendPushToSubscribers(
       await webpush.sendNotification(subscription, payload);
       sent++;
     } catch (err) {
-      // Expired/invalid subscription (410 Gone / 404) -> clean it up.
       const status = (err as { statusCode?: number }).statusCode;
       if (status === 404 || status === 410) {
         await sb.from("push_subscriptions").delete().eq("id", row.id as string);
@@ -483,12 +611,13 @@ Deno.serve(async () => {
     const results: Record<string, unknown> = {};
 
     for (const symbolDef of enabledSymbols) {
-      const [trendCandles, entryCandles] = await Promise.all([
-        fetchCandles(symbolDef.pair, config.trendTimeframe, 260),
+      const [trendCandles, structureCandles, entryCandles] = await Promise.all([
+        fetchCandles(symbolDef.pair, config.trendTimeframe, 300),
+        fetchCandles(symbolDef.pair, config.structureTimeframe, 220),
         fetchCandles(symbolDef.pair, config.entryTimeframe, 150),
       ]);
 
-      const { setup, regime, regimeDetail, reasons } = evaluateSetup(symbolDef.symbol, trendCandles, entryCandles, config);
+      const { setup, regime, regimeDetail, zones, reasons } = evaluateSetup(symbolDef.symbol, trendCandles, structureCandles, entryCandles, config);
 
       const { data: stateRow } = await sb.from("scalp_signal_state").select("*").eq("symbol", symbolDef.symbol).maybeSingle();
       const prevState: SignalState = (stateRow?.state as SignalState) || "NO_TRADE";
@@ -499,7 +628,7 @@ Deno.serve(async () => {
       const usdRate = await getUsdRate(config.capitalCurrency);
       const currentPrice = entryCandles[entryCandles.length - 1]?.close ?? 0;
 
-      const risk = setup ? calculateRisk(setup, config, dailyRisk, usdRate) : null;
+      const risk = setup ? calculateRisk(setup, zones, config, dailyRisk, usdRate) : null;
       const confidence = setup && risk ? calculateConfidenceScore(setup, regimeDetail, risk, config) : null;
 
       const { data: openTradeRow } = await sb.from("scalp_paper_trades").select("*").eq("symbol", symbolDef.symbol).eq("result", "OPEN").maybeSingle();

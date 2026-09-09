@@ -1,15 +1,18 @@
 import { calculateATR, calculateMACD, calculateRSI } from '../indicators'
 import { detectRegime, type RegimeResult } from './regime'
-import { findRecentBreakout, detectPullback } from './levels'
+import { detectZones } from './zones'
+import { findSetupCandidate } from './levels'
 import { detectConfirmation } from './confirmation'
-import type { Candle, MarketRegime, ScalpSetup } from '../../types/scalpSignal'
+import type { Candle, MarketRegime, ScalpSetup, Zone } from '../../types/scalpSignal'
 import type { StrategyConfig } from '../../config/strategyConfig'
 
 export interface StrategyEngineInput {
   symbol: string
-  /** Higher timeframe (default 15m) — used only for market regime. */
+  /** Market regime timeframe (default 4h). */
   trendCandles: Candle[]
-  /** Lower timeframe (default 5m) — used for breakout/pullback/confirmation/entry. */
+  /** Support/resistance structure timeframe (default 1h). */
+  structureCandles: Candle[]
+  /** Entry confirmation timeframe (default 15m). */
   entryCandles: Candle[]
   config: StrategyConfig
 }
@@ -18,52 +21,52 @@ export interface StrategyEngineResult {
   setup: ScalpSetup | null
   regime: MarketRegime
   regimeDetail: RegimeResult
+  zones: Zone[]
   reasons: string[]
 }
 
 /**
- * Pure rule-based strategy engine: no I/O, no side effects, no global state. Given klines for
- * both timeframes it returns a concrete ScalpSetup or null (NO TRADE). Designed to be callable
- * identically from the live client, a server-side scheduled cycle, paper trading, and — in the
- * future — a historical backtest, without any rewrite.
+ * Pure rule-based strategy engine: no I/O, no side effects, no global state. Priority order:
+ * regime -> significant structure zones -> price reaction/structure -> mandatory confirmation ->
+ * (risk/reward is decided downstream by the risk engine). Given klines for all three timeframes
+ * it returns a concrete ScalpSetup or null (NO TRADE) — prudent by default: any missing link in
+ * the chain stops the search immediately rather than settling for a weaker signal.
  */
 export function evaluateSetup(input: StrategyEngineInput): StrategyEngineResult {
-  const { symbol, trendCandles, entryCandles, config } = input
+  const { symbol, trendCandles, structureCandles, entryCandles, config } = input
   const reasons: string[] = []
 
   const regimeDetail = detectRegime(trendCandles, config)
   if (regimeDetail.regime === 'neutral') {
-    reasons.push('regime_neutral')
-    return { setup: null, regime: 'neutral', regimeDetail, reasons }
+    reasons.push('regime_range')
+    return { setup: null, regime: 'neutral', regimeDetail, zones: [], reasons }
   }
   const direction = regimeDetail.regime === 'bullish' ? 'long' : 'short'
-  reasons.push(regimeDetail.regime === 'bullish' ? 'trend_15m_bullish' : 'trend_15m_bearish')
+  reasons.push(regimeDetail.regime === 'bullish' ? 'trend_4h_bullish' : 'trend_4h_bearish')
 
-  if (entryCandles.length < config.swingLookback + 2) {
+  const zones = detectZones(structureCandles, config)
+  if (zones.length === 0) {
+    reasons.push('no_significant_zones')
+    return { setup: null, regime: regimeDetail.regime, regimeDetail, zones, reasons }
+  }
+
+  if (entryCandles.length < config.pullbackMaxBars + 3) {
     reasons.push('insufficient_entry_data')
-    return { setup: null, regime: regimeDetail.regime, regimeDetail, reasons }
+    return { setup: null, regime: regimeDetail.regime, regimeDetail, zones, reasons }
   }
 
-  const breakout = findRecentBreakout(entryCandles, config, direction)
-  if (!breakout) {
-    reasons.push('no_breakout')
-    return { setup: null, regime: regimeDetail.regime, regimeDetail, reasons }
+  const candidate = findSetupCandidate(entryCandles, zones, direction, config)
+  if (!candidate) {
+    reasons.push('no_structure_setup')
+    return { setup: null, regime: regimeDetail.regime, regimeDetail, zones, reasons }
   }
-  reasons.push('breakout_detected')
+  reasons.push(candidate.setupType === 'ZONE_REACTION' ? 'zone_reaction_detected' : 'breakout_pullback_retest_detected')
 
-  const pullback = detectPullback(entryCandles, breakout)
-  if (!pullback.confirmed) {
-    reasons.push('pullback_not_confirmed')
-    return { setup: null, regime: regimeDetail.regime, regimeDetail, reasons }
-  }
-  reasons.push('pullback_confirmed')
-
-  // Breakout + pullback are structural (setup exists from here on); confirmation quality is
-  // carried on the setup itself so the state machine can distinguish SETUP (unconfirmed) from
-  // CONFIRMED (ready to trade) without the engine re-running.
-  const confirmation = detectConfirmation(entryCandles, pullback, direction, config)
+  // Structural setup exists from here on; confirmation quality is carried on the setup itself so
+  // the state machine can distinguish SETUP (unconfirmed) from CONFIRMED without re-running.
+  const confirmation = detectConfirmation(entryCandles, candidate.zone, direction, config)
   if (!confirmation.confirmed) reasons.push('confirmation_missing')
-  if (confirmation.candlestickRejection) reasons.push('candlestick_confirmation')
+  else reasons.push('rejection_and_reclaim_confirmed')
   if (confirmation.volumeConfirmed) reasons.push('volume_confirmation')
   if (confirmation.rsiConfirmed) reasons.push('rsi_healthy')
   if (confirmation.macdConfirmed) reasons.push(direction === 'long' ? 'macd_bullish' : 'macd_bearish')
@@ -79,18 +82,32 @@ export function evaluateSetup(input: StrategyEngineInput): StrategyEngineResult 
   const avgVolume = recentVolumes.reduce((a, b) => a + b, 0) / (recentVolumes.length || 1)
   const volumeRatio = avgVolume > 0 ? last.volume / avgVolume : 1
 
-  const pullbackLeg = entryCandles.slice(breakout.breakoutIndex + 1, pullback.pullbackIndex + 1)
+  // Invalidation point: the lowest low (long) / highest high (short) since the setup started
+  // interacting with the zone — where the original premise breaks down.
+  const sinceTrigger = entryCandles.slice(candidate.triggerIndex)
   const stopCandidate =
     direction === 'long'
-      ? Math.min(breakout.level, ...pullbackLeg.map((c) => c.low))
-      : Math.max(breakout.level, ...pullbackLeg.map((c) => c.high))
+      ? Math.min(candidate.zone.low, ...sinceTrigger.map((c) => c.low))
+      : Math.max(candidate.zone.high, ...sinceTrigger.map((c) => c.high))
 
+  const triggerCandle = entryCandles[candidate.triggerIndex] ?? last
   const setup: ScalpSetup = {
     symbol,
     direction,
     regime: regimeDetail.regime,
-    breakout,
-    pullback,
+    setupType: candidate.setupType,
+    zone: candidate.zone,
+    breakout: {
+      direction,
+      level: direction === 'long' ? candidate.zone.high : candidate.zone.low,
+      breakoutIndex: candidate.triggerIndex,
+      breakoutClose: triggerCandle.close,
+    },
+    pullback: {
+      confirmed: confirmation.confirmed,
+      pullbackIndex: candidate.reactionIndex,
+      retestPrice: direction === 'long' ? last.low : last.high,
+    },
     confirmation,
     entryPrice: last.close,
     stopCandidate,
@@ -102,5 +119,5 @@ export function evaluateSetup(input: StrategyEngineInput): StrategyEngineResult 
     timestamp: last.closeTime,
   }
 
-  return { setup, regime: regimeDetail.regime, regimeDetail, reasons }
+  return { setup, regime: regimeDetail.regime, regimeDetail, zones, reasons }
 }

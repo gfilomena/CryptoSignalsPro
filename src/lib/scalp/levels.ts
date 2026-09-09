@@ -1,72 +1,80 @@
-import type { BreakoutInfo, Candle, PullbackInfo, TradeDirection } from '../../types/scalpSignal'
+import type { Candle, SetupType, TradeDirection, Zone } from '../../types/scalpSignal'
 import type { StrategyConfig } from '../../config/strategyConfig'
+import { nearestZoneAhead, priceBrokeZone, priceInZone } from './zones'
+
+export interface SetupCandidate {
+  setupType: SetupType
+  zone: Zone
+  /** Entry-timeframe index where price first touched/broke the zone. */
+  triggerIndex: number
+  /** Most recent candle — the one confirmation.ts evaluates for rejection + reclaim. */
+  reactionIndex: number
+}
+
+const supportKindFor = (direction: TradeDirection): Zone['kind'] => (direction === 'long' ? 'support' : 'resistance')
+const brokenKindFor = (direction: TradeDirection): Zone['kind'] => (direction === 'long' ? 'resistance' : 'support')
 
 /**
- * Scans backward from the most recent closed candle for the latest breakout of a swing
- * high/low formed over `swingLookback` prior bars, restricted to `direction` (the 15m regime
- * bias) so we never chase a breakout against the higher-timeframe trend. Only breakouts within
- * the last `pullbackMaxBars` are considered "recent" — older ones can no longer form a valid
- * pullback setup.
+ * ZONE_REACTION (mean-reversion): price has touched a significant zone in the direction's favor
+ * (support for a long, resistance for a short) within the recent window. Touching alone is never
+ * enough — this only locates the candidate; confirmation.ts still requires the most recent candle
+ * to show an actual rejection + reclaim before the setup is tradable.
  */
-export function findRecentBreakout(
-  candles: Candle[],
-  config: StrategyConfig,
-  direction: TradeDirection,
-): BreakoutInfo | null {
-  const { swingLookback, pullbackMaxBars } = config
-  const n = candles.length
-  if (n < swingLookback + 1) return null
+function findZoneReaction(candles: Candle[], zones: Zone[], direction: TradeDirection, config: StrategyConfig): SetupCandidate | null {
+  const window = candles.slice(-(config.pullbackMaxBars + 1))
+  if (window.length < 2) return null
 
-  const searchStart = n - 1
-  const searchEnd = Math.max(swingLookback, n - 1 - pullbackMaxBars)
-
-  for (let i = searchStart; i >= searchEnd; i--) {
-    const window = candles.slice(i - swingLookback, i)
-    if (window.length < swingLookback) continue
-    const c = candles[i]
-
-    if (direction === 'long') {
-      const swingHigh = Math.max(...window.map((w) => w.high))
-      if (c.close > swingHigh) {
-        return { direction: 'long', level: swingHigh, breakoutIndex: i, breakoutClose: c.close }
-      }
-    } else {
-      const swingLow = Math.min(...window.map((w) => w.low))
-      if (c.close < swingLow) {
-        return { direction: 'short', level: swingLow, breakoutIndex: i, breakoutClose: c.close }
-      }
+  for (const zone of zones.filter((z) => z.kind === supportKindFor(direction))) {
+    const touchOffset = window.findIndex((c) => priceInZone(zone, direction === 'long' ? c.low : c.high))
+    if (touchOffset === -1) continue
+    return {
+      setupType: 'ZONE_REACTION',
+      zone,
+      triggerIndex: candles.length - window.length + touchOffset,
+      reactionIndex: candles.length - 1,
     }
   }
   return null
 }
 
 /**
- * A pullback is confirmed when, after the breakout bar, price retests the broken level (now
- * acting as support for a long / resistance for a short) and the level *holds*: the latest
- * closed candle is still back on the breakout side of the level.
+ * BREAKOUT_PULLBACK_RETEST (trend continuation): a significant opposing zone was broken, price
+ * pulled back into it (the level flips role — broken resistance becomes support and vice versa),
+ * and it has been retested. The final rejection + reclaim is still checked by confirmation.ts.
  */
-export function detectPullback(candles: Candle[], breakout: BreakoutInfo): PullbackInfo {
-  const after = candles.slice(breakout.breakoutIndex + 1)
-  if (after.length === 0) return { confirmed: false, pullbackIndex: -1, retestPrice: 0 }
+function findBreakoutPullbackRetest(candles: Candle[], zones: Zone[], direction: TradeDirection, config: StrategyConfig): SetupCandidate | null {
+  const window = candles.slice(-(config.pullbackMaxBars + 2))
+  if (window.length < 3) return null
 
-  const level = breakout.level
-  let pullbackIndex = -1
-  let retestPrice = 0
-
-  for (let j = 0; j < after.length; j++) {
-    const c = after[j]
-    if (breakout.direction === 'long' && c.low <= level) {
-      pullbackIndex = breakout.breakoutIndex + 1 + j
-      retestPrice = c.low
-    } else if (breakout.direction === 'short' && c.high >= level) {
-      pullbackIndex = breakout.breakoutIndex + 1 + j
-      retestPrice = c.high
-    }
+  for (const zone of zones.filter((z) => z.kind === brokenKindFor(direction))) {
+    const breakoutOffset = window.findIndex((c) => priceBrokeZone(zone, c.close, direction))
+    if (breakoutOffset === -1) continue
+    const breakoutIndex = candles.length - window.length + breakoutOffset
+    const after = candles.slice(breakoutIndex + 1)
+    if (after.length === 0) continue
+    const retested = after.some((c) => priceInZone(zone, direction === 'long' ? c.low : c.high))
+    if (!retested) continue
+    return { setupType: 'BREAKOUT_PULLBACK_RETEST', zone, triggerIndex: breakoutIndex, reactionIndex: candles.length - 1 }
   }
+  return null
+}
 
-  if (pullbackIndex === -1) return { confirmed: false, pullbackIndex: -1, retestPrice: 0 }
+/**
+ * Looks for either valid structural pattern on the entry timeframe. ZONE_REACTION takes priority
+ * over BREAKOUT_PULLBACK_RETEST — reacting at an already-proven level is preferred over chasing a
+ * fresh break. Returns null (NO TRADE) when neither pattern is currently forming.
+ */
+export function findSetupCandidate(
+  candles: Candle[],
+  zones: Zone[],
+  direction: TradeDirection,
+  config: StrategyConfig,
+): SetupCandidate | null {
+  return findZoneReaction(candles, zones, direction, config) ?? findBreakoutPullbackRetest(candles, zones, direction, config)
+}
 
-  const last = candles[candles.length - 1]
-  const levelHolds = breakout.direction === 'long' ? last.close > level : last.close < level
-  return { confirmed: levelHolds, pullbackIndex, retestPrice }
+/** Next significant opposing zone beyond `entryPrice` — used by the risk engine to build a
+ * structure-based take-profit instead of a fixed R multiple. */
+export function nextTargetZone(zones: Zone[], entryPrice: number, direction: TradeDirection): Zone | null {
+  return nearestZoneAhead(zones, direction === 'long' ? 'resistance' : 'support', entryPrice, direction)
 }

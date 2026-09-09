@@ -5,6 +5,7 @@ import type { SignalSnapshot } from '../types/scalpSignal'
 interface Props {
   snapshot: SignalSnapshot | null
   loading: boolean
+  whaleContext?: 'bullish' | 'bearish' | null
 }
 
 const STATE_ICON: Record<string, string> = {
@@ -24,7 +25,7 @@ function fmtUsd(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export function SignalCard({ snapshot, loading }: Props) {
+export function SignalCard({ snapshot, loading, whaleContext }: Props) {
   const { t } = useI18n()
 
   const state = snapshot?.state ?? 'NO_TRADE'
@@ -43,6 +44,7 @@ export function SignalCard({ snapshot, loading }: Props) {
         <div className="signal-title">
           {icon} {t(`scalp.state.${state}`)}
           <span className="current-signal-symbol">{snapshot?.symbol ?? 'BTC'}/USDT</span>
+          {setup ? <span className="scalp-setup-type-badge">{t(`scalp.setupType.${setup.setupType}`)}</span> : null}
         </div>
 
         {loading ? <div className="current-signal-loading">{t('scalp.loading')}</div> : null}
@@ -71,7 +73,7 @@ export function SignalCard({ snapshot, loading }: Props) {
             </div>
             <div className="bt-summary-item">
               <div className="bt-s-label">{t('scalp.confidence')}</div>
-              <div className="bt-s-value">{confidence ?? 0}%</div>
+              <div className="bt-s-value">{confidence ?? 0}/100</div>
             </div>
             <div className="bt-summary-item">
               <div className="bt-s-label">{t('scalp.risk')}</div>
@@ -94,6 +96,8 @@ export function SignalCard({ snapshot, loading }: Props) {
           </div>
         )}
 
+        {setup && risk?.valid ? <div className="current-signal-quality-note">{t('scalp.qualityDisclaimer')}</div> : null}
+
         {risk && !risk.valid && risk.reasonInvalid ? (
           <div className="signal-detail current-signal-blocked">{t(`scalp.riskBlocked.${risk.reasonInvalid}`)}</div>
         ) : null}
@@ -106,6 +110,12 @@ export function SignalCard({ snapshot, loading }: Props) {
                 <li key={reason}>{t(`scalp.reason.${reason}`)}</li>
               ))}
             </ul>
+          </div>
+        ) : null}
+
+        {whaleContext ? (
+          <div className="current-signal-whale-context">
+            🐋 {t(`scalp.whaleContext.${whaleContext}`)}
           </div>
         ) : null}
       </div>

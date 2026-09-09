@@ -1,4 +1,16 @@
 import type { Currency } from '../types/domain'
+import type { AlertType } from '../types/scalpSignal'
+
+/** Alert types that trigger a push notification. SETUP_DETECTED is intentionally excluded — it's
+ * recorded in the signal history for transparency but never worth interrupting the user for
+ * (prudent mode: only real trade-affecting events push). */
+export const PUSH_ALERT_TYPES: AlertType[] = [
+  'ENTRY_CONFIRMED',
+  'STOP_HIT',
+  'TP1_HIT',
+  'TP2_HIT',
+  'SETUP_INVALIDATED',
+]
 
 export interface ScalpSymbolDef {
   symbol: string
@@ -26,18 +38,34 @@ export interface TradingCosts {
 
 export interface StrategyConfig {
   symbols: ScalpSymbolDef[]
+  /** Market regime / main trend timeframe. */
   trendTimeframe: string
+  /** Support/resistance structure timeframe — where significant zones are detected. */
+  structureTimeframe: string
+  /** Entry confirmation timeframe. */
   entryTimeframe: string
   emaFast: number
   emaMedium: number
   emaSlow: number
+  /** Candles (trend timeframe) scanned for the higher-high/higher-low structure check. */
+  structureSwingLookback: number
   rsiPeriod: number
   atrPeriod: number
+  /** Candles (entry timeframe) averaged for the volume-confirmation baseline. */
   swingLookback: number
+  /** Max entry-timeframe candles after a zone breakout to still count a pullback/retest as valid. */
   pullbackMaxBars: number
   volumeConfirmMult: number
   maxStopAtr: number
   atrStopBufferMult: number
+  /** Structure-timeframe candles scanned for support/resistance zones. */
+  zoneLookback: number
+  /** Candles on each side required to confirm a swing pivot (structure timeframe). */
+  zonePivotWindow: number
+  /** Minimum number of times a zone must have been tested to count as significant. */
+  zoneMinTouches: number
+  /** Clustering tolerance for grouping nearby pivots into one zone, as % of price. */
+  zoneClusterPct: number
   capital: number
   capitalCurrency: Currency
   riskPerTradePct: number
@@ -58,25 +86,31 @@ export const DEFAULT_STRATEGY_CONFIG: StrategyConfig = {
     { symbol: 'SOL', name: 'Solana', pair: 'SOLUSDT', enabled: false },
     { symbol: 'BNB', name: 'Binance Coin', pair: 'BNBUSDT', enabled: false },
   ],
-  trendTimeframe: '15m',
-  entryTimeframe: '5m',
+  trendTimeframe: '4h',
+  structureTimeframe: '1h',
+  entryTimeframe: '15m',
   emaFast: 20,
   emaMedium: 50,
   emaSlow: 200,
+  structureSwingLookback: 10,
   rsiPeriod: 14,
   atrPeriod: 14,
   swingLookback: 20,
-  pullbackMaxBars: 12,
+  pullbackMaxBars: 8,
   volumeConfirmMult: 1.2,
   maxStopAtr: 2.5,
   atrStopBufferMult: 0.25,
+  zoneLookback: 150,
+  zonePivotWindow: 3,
+  zoneMinTouches: 2,
+  zoneClusterPct: 0.15,
   capital: 100_000,
   capitalCurrency: 'usd',
-  riskPerTradePct: 0.25,
+  riskPerTradePct: 1,
   minRiskReward: 2.0,
   maxDailyLossR: 2,
-  maxTradesPerDay: 3,
-  minSignalConfidence: 70,
+  maxTradesPerDay: 2,
+  minSignalConfidence: 60,
   confidenceWeights: {
     trendAlignment: 25,
     breakoutQuality: 15,
@@ -95,7 +129,9 @@ export const DEFAULT_STRATEGY_CONFIG: StrategyConfig = {
   },
 }
 
-const STORAGE_KEY = 'csp_strategy_config_v1'
+// v2: prudent-mode restructuring (4h/1h/15m timeframes, zone-based structure, new risk defaults) —
+// bumped so a browser with a v1 override never silently resurrects the old, looser defaults.
+const STORAGE_KEY = 'csp_strategy_config_v2'
 
 function mergeConfig(base: StrategyConfig, override: Partial<StrategyConfig>): StrategyConfig {
   return {

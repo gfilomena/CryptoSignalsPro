@@ -77,14 +77,16 @@ function saveLocalStore(symbol: string, store: LocalSignalStore): void {
  * shows a live Current Signal), or as an offline-safe local mirror.
  */
 async function evaluateSymbolLocally(symbolDef: ScalpSymbolDef, config: StrategyConfig): Promise<SignalDataResult> {
-  const [trendCandles, entryCandles] = await Promise.all([
-    fetchCandles(symbolDef.pair, config.trendTimeframe, 260),
+  const [trendCandles, structureCandles, entryCandles] = await Promise.all([
+    fetchCandles(symbolDef.pair, config.trendTimeframe, 300),
+    fetchCandles(symbolDef.pair, config.structureTimeframe, 220),
     fetchCandles(symbolDef.pair, config.entryTimeframe, 150),
   ])
 
-  const { setup, regime, regimeDetail, reasons } = evaluateSetup({
+  const { setup, regime, regimeDetail, zones, reasons } = evaluateSetup({
     symbol: symbolDef.symbol,
     trendCandles,
+    structureCandles,
     entryCandles,
     config,
   })
@@ -95,7 +97,7 @@ async function evaluateSymbolLocally(symbolDef: ScalpSymbolDef, config: Strategy
   const usdRate = await getUsdRate(config.capitalCurrency)
   const currentPrice = entryCandles[entryCandles.length - 1]?.close ?? 0
 
-  const risk = setup ? calculateRisk(setup, config, dailyRisk, usdRate) : null
+  const risk = setup ? calculateRisk(setup, zones, config, dailyRisk, usdRate) : null
   const confidence = setup && risk ? calculateConfidenceScore(setup, regimeDetail, risk, config) : null
 
   const activeTrade = store.openTrade

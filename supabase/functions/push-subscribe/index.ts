@@ -25,9 +25,12 @@ Deno.serve(async (req: Request) => {
       if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
         return new Response(JSON.stringify({ ok: false, reason: "invalid_subscription" }), { headers: corsHeaders, status: 400 });
       }
+      // SETUP_DETECTED is deliberately excluded from this fallback — prudent mode never pushes
+      // for a setup that isn't yet a real, risk-validated trade (see PUSH_ALERT_TYPES in
+      // signal-cycle). Still selectable/visible in the Signal History, just not push-worthy.
       const alertTypes = Array.isArray(body.alertTypes) && body.alertTypes.length > 0
         ? body.alertTypes
-        : ["SETUP_DETECTED", "ENTRY_CONFIRMED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
+        : ["ENTRY_CONFIRMED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
 
       const { error } = await sb.from("push_subscriptions").upsert(
         { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, alert_types: alertTypes, updated_at: new Date().toISOString() },

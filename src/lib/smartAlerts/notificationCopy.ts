@@ -1,7 +1,7 @@
 import type { AlertCategory, MetricSnapshot, SmartAlert, TriggeredAlertEvent } from '../../types/smartAlert'
 
-/** Neutral, informational monitoring language keyed by category — never "BUY"/"SELL"/"execute
- * trade". These map to i18n keys smartAlerts.categoryMessage.<category> in the message files. */
+/** Informational monitoring language keyed by category — never "execute trade"/"place order"; a
+ * colour + direction hint (see directionLabel) is shown in the title, the decision stays the user's. These map to i18n keys smartAlerts.categoryMessage.<category> in the message files. */
 export const CATEGORY_MESSAGE_KEY: Record<AlertCategory, string> = {
   PRICE: 'PRICE',
   MOMENTUM: 'MOMENTUM',
@@ -40,6 +40,23 @@ export function buildMetricLines(snapshot: MetricSnapshot): string[] {
   return lines
 }
 
+/** Direction hint shown at the start of the push title. Push copy is generated server-side with no
+ * per-user language, so labels are fixed (Italian) — keep in sync with supabase/functions/smart-alerts-cycle. */
+export function directionLabel(category: AlertCategory): string {
+  switch (category) {
+    case 'REVERSAL_WATCH':
+      return '🟢 COMPRA'
+    case 'MARKET_STRENGTH':
+      return '🟢 COMPRA/TIENI'
+    case 'OVERHEATED_MARKET':
+      return '🔴 VENDI'
+    default:
+      return '⚪ NEUTRO'
+  }
+}
+
+export const PUSH_DISCLAIMER = 'Non è un consiglio finanziario'
+
 export interface PushPayload {
   title: string
   body: string
@@ -50,13 +67,13 @@ export interface PushPayload {
 }
 
 /**
- * Builds the Web Push payload for a triggered Smart Alert. Deliberately neutral/monitoring
- * language ("Reversal Watch triggered", never "SELL BTC") — see spec section 10.
+ * Builds the Web Push payload for a triggered Smart Alert. Title starts with a colour/direction
+ * hint (directionLabel); the body stays monitoring language plus a not-financial-advice line.
  */
 export function buildPushPayload(alert: SmartAlert, snapshot: MetricSnapshot, categoryMessage: string): PushPayload {
-  const title = `${alert.symbol}/USDT — ${alert.name}`
+  const title = `${directionLabel(alert.category)} · ${alert.symbol}/USDT — ${alert.name}`
   const lines = buildMetricLines(snapshot)
-  const body = [categoryMessage, ...lines].join('\n')
+  const body = [categoryMessage, ...lines, PUSH_DISCLAIMER].join('\n')
   return { title, body, type: 'SMART_ALERT', symbol: alert.symbol, alertId: alert.id, category: alert.category }
 }
 

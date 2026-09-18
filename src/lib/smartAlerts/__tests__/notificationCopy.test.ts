@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildMetricLines, buildPushPayload, toTriggeredEvent } from '../notificationCopy'
+import { buildMetricLines, buildPushPayload, directionLabel, toTriggeredEvent } from '../notificationCopy'
 import { baseAlert, emptySnapshot } from './testUtils'
 
-const BANNED_WORDS = ['BUY', 'SELL', 'buy btc', 'sell btc', 'execute trade', 'place order']
+const BANNED_WORDS = ['execute trade', 'place order', 'buy btc', 'sell btc']
 
 describe('buildPushPayload', () => {
-  it('never contains an automated buy/sell instruction', () => {
+  it('never contains an automated trade-execution instruction', () => {
     const alert = baseAlert({ symbol: 'BTC', name: 'Reversal Watch', category: 'REVERSAL_WATCH' })
     const snapshot = emptySnapshot({ price: 81240, priceChangePct: -0.62, openInterestChangePct: { '15m': 1.43 }, fundingRate: 0.0081 })
     const payload = buildPushPayload(alert, snapshot, 'Reversal Watch triggered')
@@ -30,6 +30,22 @@ describe('buildPushPayload', () => {
     const payload = buildPushPayload(alert, emptySnapshot(), 'x')
     expect(payload.type).toBe('SMART_ALERT')
     expect(payload.alertId).toBe('abc-123')
+  })
+})
+
+describe('directionLabel', () => {
+  it('maps preset categories to a colour + direction hint, everything else neutral', () => {
+    expect(directionLabel('REVERSAL_WATCH')).toBe('🟢 COMPRA')
+    expect(directionLabel('MARKET_STRENGTH')).toBe('🟢 COMPRA/TIENI')
+    expect(directionLabel('OVERHEATED_MARKET')).toBe('🔴 VENDI')
+    expect(directionLabel('LIQUIDATION')).toBe('⚪ NEUTRO')
+    expect(directionLabel('CUSTOM')).toBe('⚪ NEUTRO')
+  })
+
+  it('puts the label first in the title and a disclaimer last in the body', () => {
+    const payload = buildPushPayload(baseAlert({ category: 'OVERHEATED_MARKET', name: 'Overheated Market' }), emptySnapshot({ price: 100 }), 'x')
+    expect(payload.title.startsWith('🔴 VENDI · BTC/USDT')).toBe(true)
+    expect(payload.body.endsWith('Non è un consiglio finanziario')).toBe(true)
   })
 })
 

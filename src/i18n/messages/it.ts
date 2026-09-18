@@ -610,7 +610,7 @@ export const it: MessageTree = {
       min60: '1 ora',
       min240: '4 ore',
     },
-    push: { label: 'Notifiche push' },
+    push: { label: 'Notifiche push', testBtn: 'Test alert' },
     name: { label: "Nome dell'alert", placeholder: 'es. BTC Reversal Watch' },
     review: {
       title: 'Rivedi alert',

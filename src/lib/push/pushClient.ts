@@ -141,14 +141,14 @@ export async function updateSmartAlertsPushPreference(enabled: boolean): Promise
   })
 }
 
-export async function sendTestNotification(): Promise<void> {
+export async function sendTestNotification(kind?: 'smart_alert'): Promise<void> {
   const registration = await navigator.serviceWorker.getRegistration()
   const subscription = await registration?.pushManager.getSubscription()
   if (!subscription) throw new Error('not_subscribed')
   const res = await edgeFetch('/push-test', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ endpoint: subscription.endpoint }),
+    body: JSON.stringify({ endpoint: subscription.endpoint, kind }),
   })
   if (!res.ok) throw new Error('test_failed')
 }

@@ -13,6 +13,7 @@ import {
   disableNotifications,
   enableNotifications,
   getPushStatus,
+  sendTestNotification,
   updateSmartAlertsPushPreference,
   type PushStatus,
 } from '../../lib/push/pushClient'
@@ -35,6 +36,7 @@ export function SmartAlertsSection() {
   const [pushStatus, setPushStatus] = useState<PushStatus | null>(null)
   const [smartAlertsPushEnabled, setSmartAlertsPushEnabled] = useState(true)
   const [settingsBusy, setSettingsBusy] = useState(false)
+  const [testMessage, setTestMessage] = useState<string | null>(null)
 
   useEffect(() => {
     void getPushStatus().then(setPushStatus)
@@ -81,6 +83,19 @@ export function SmartAlertsSection() {
     } catch {
       /* getPushStatus below still reflects the real state */
       setPushStatus(await getPushStatus())
+    } finally {
+      setSettingsBusy(false)
+    }
+  }
+
+  const handleTestAlert = async () => {
+    setSettingsBusy(true)
+    setTestMessage(null)
+    try {
+      await sendTestNotification('smart_alert')
+      setTestMessage(t('scalp.setup.testSent'))
+    } catch {
+      setTestMessage(t('scalp.setup.testFailed'))
     } finally {
       setSettingsBusy(false)
     }
@@ -137,6 +152,14 @@ export function SmartAlertsSection() {
                   {t('scalp.setup.enableNotifications')}
                 </button>
               )}
+            </div>
+          ) : null}
+          {pushStatus?.subscribed ? (
+            <div className="bt-field-row">
+              <button type="button" className="bt-run-btn" disabled={settingsBusy} onClick={handleTestAlert}>
+                {t('smartAlerts.push.testBtn')}
+              </button>
+              {testMessage ? <p className="bt-field-hint">{testMessage}</p> : null}
             </div>
           ) : null}
           {pushStatus?.subscribed ? (

@@ -593,7 +593,7 @@ export const es: MessageTree = {
       min60: '1 hora',
       min240: '4 horas',
     },
-    push: { label: 'Notificaciones push' },
+    push: { label: 'Notificaciones push', testBtn: 'Probar alerta' },
     name: { label: 'Nombre de la alerta', placeholder: 'p. ej. BTC Vigilancia de reversión' },
     review: {
       title: 'Revisar alerta',

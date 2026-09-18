@@ -31,9 +31,14 @@ Deno.serve(async (req: Request) => {
       const alertTypes = Array.isArray(body.alertTypes) && body.alertTypes.length > 0
         ? body.alertTypes
         : ["ENTRY_CONFIRMED", "EXIT_SUGGESTED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
+      // Smart Alerts push is a separate opt-in (defaults on) from the scalp engine's alert_types.
+      const smartAlertsEnabled = typeof body.smartAlertsEnabled === "boolean" ? body.smartAlertsEnabled : true;
 
       const { error } = await sb.from("push_subscriptions").upsert(
-        { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, alert_types: alertTypes, updated_at: new Date().toISOString() },
+        {
+          endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, alert_types: alertTypes,
+          smart_alerts_enabled: smartAlertsEnabled, updated_at: new Date().toISOString(),
+        },
         { onConflict: "endpoint" },
       );
       if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { headers: corsHeaders, status: 500 });
@@ -50,10 +55,13 @@ Deno.serve(async (req: Request) => {
     if (action === "update_preferences") {
       const endpoint = body.endpoint as string;
       const alertTypes = body.alertTypes;
-      if (!endpoint || !Array.isArray(alertTypes)) {
+      if (!endpoint || (alertTypes !== undefined && !Array.isArray(alertTypes))) {
         return new Response(JSON.stringify({ ok: false, reason: "invalid_payload" }), { headers: corsHeaders, status: 400 });
       }
-      const { error } = await sb.from("push_subscriptions").update({ alert_types: alertTypes, updated_at: new Date().toISOString() }).eq("endpoint", endpoint);
+      const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (Array.isArray(alertTypes)) patch.alert_types = alertTypes;
+      if (typeof body.smartAlertsEnabled === "boolean") patch.smart_alerts_enabled = body.smartAlertsEnabled;
+      const { error } = await sb.from("push_subscriptions").update(patch).eq("endpoint", endpoint);
       if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { headers: corsHeaders, status: 500 });
       return new Response(JSON.stringify({ ok: true, action: "updated" }), { headers: corsHeaders });
     }

@@ -12,6 +12,7 @@ import { SentimentCard } from './components/SentimentCard'
 import { WhaleSection } from './components/WhaleSection'
 import { BacktestSection } from './components/BacktestSection'
 import { SignalCard } from './components/SignalCard'
+import { SmartAlertsSection } from './components/SmartAlerts'
 import { SetupPanel } from './components/SetupPanel'
 import { SignalHistoryPanel } from './components/SignalHistoryPanel'
 import { PaperTradingStats } from './components/PaperTradingStats'
@@ -115,6 +116,8 @@ function Main() {
           {t('app.installApp')}
         </a>
       </div>
+
+      <SmartAlertsSection />
 
       <SetupPanel onConfigChange={setScalpConfig} />
 

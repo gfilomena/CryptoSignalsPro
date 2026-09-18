@@ -9,6 +9,14 @@ import { AlertBuilderModal } from './AlertBuilderModal'
 import { createAlertFromPreset, getPreset, type PresetId } from '../../lib/smartAlerts/presets'
 
 const ESSENTIAL_PRESETS: PresetId[] = ['reversal_watch', 'strong_momentum', 'overheated_market']
+
+/** Fixed ids: saving is an upsert by id (local store and server), so re-running quick-start — double tap,
+ * tap before the list has loaded, or from a second device — overwrites instead of duplicating. */
+const ESSENTIAL_IDS: Record<string, string> = {
+  reversal_watch: '5e1a0001-0000-4000-8000-00000000b7c1',
+  strong_momentum: '5e1a0002-0000-4000-8000-00000000b7c1',
+  overheated_market: '5e1a0003-0000-4000-8000-00000000b7c1',
+}
 import {
   disableNotifications,
   enableNotifications,
@@ -28,7 +36,7 @@ function isToday(timestamp: number): boolean {
 
 export function SmartAlertsSection() {
   const { t } = useI18n()
-  const { alerts, history, snapshots, saveAlert, deleteAlert, toggleAlert, markRead, deleteHistory } = useSmartAlerts()
+  const { alerts, history, snapshots, loading, saveAlert, deleteAlert, toggleAlert, markRead, deleteHistory } = useSmartAlerts()
 
   const [tab, setTab] = useState<Tab>('active')
   const [builderState, setBuilderState] = useState<{ initial?: SmartAlert; presetId?: PresetId } | null>(null)
@@ -66,7 +74,7 @@ export function SmartAlertsSection() {
     quickStartBusy.current = true
     try {
       for (const id of missingEssentials) {
-        await saveAlert(createAlertFromPreset(id, t(`smartAlerts.preset.${id}.name`), { symbol: 'BTC', mode: 'ALWAYS' }))
+        await saveAlert({ ...createAlertFromPreset(id, t(`smartAlerts.preset.${id}.name`), { symbol: 'BTC', mode: 'ALWAYS' }), id: ESSENTIAL_IDS[id] })
       }
       setTab('active')
     } finally {
@@ -77,7 +85,7 @@ export function SmartAlertsSection() {
   const quickStart = (
     <div className="bt-group">
       <p className="bt-field-hint" style={{ marginBottom: 8 }}>{t('smartAlerts.builder.quickStartHint')}</p>
-      <button type="button" className="bt-run-btn" disabled={missingEssentials.length === 0} onClick={handleQuickStart}>
+      <button type="button" className="bt-run-btn" disabled={loading || missingEssentials.length === 0} onClick={handleQuickStart}>
         {missingEssentials.length === 0 ? t('smartAlerts.builder.quickStartDone') : t('smartAlerts.builder.quickStartBtn')}
       </button>
     </div>

@@ -1,0 +1,64 @@
+import { describe, expect, it } from 'vitest'
+import { buildMetricLines, buildPushPayload, toTriggeredEvent } from '../notificationCopy'
+import { baseAlert, emptySnapshot } from './testUtils'
+
+const BANNED_WORDS = ['BUY', 'SELL', 'buy btc', 'sell btc', 'execute trade', 'place order']
+
+describe('buildPushPayload', () => {
+  it('never contains an automated buy/sell instruction', () => {
+    const alert = baseAlert({ symbol: 'BTC', name: 'Reversal Watch', category: 'REVERSAL_WATCH' })
+    const snapshot = emptySnapshot({ price: 81240, priceChangePct: -0.62, openInterestChangePct: { '15m': 1.43 }, fundingRate: 0.0081 })
+    const payload = buildPushPayload(alert, snapshot, 'Reversal Watch triggered')
+    const combined = `${payload.title} ${payload.body}`
+    for (const banned of BANNED_WORDS) {
+      expect(combined.toUpperCase()).not.toContain(banned.toUpperCase())
+    }
+  })
+
+  it('includes the symbol, alert name, and key metric lines', () => {
+    const alert = baseAlert({ symbol: 'BTC', name: 'Reversal Watch' })
+    const snapshot = emptySnapshot({ price: 81240, priceChangePct: -0.62 })
+    const payload = buildPushPayload(alert, snapshot, 'Reversal Watch triggered')
+    expect(payload.title).toContain('BTC/USDT')
+    expect(payload.title).toContain('Reversal Watch')
+    expect(payload.body).toContain('Reversal Watch triggered')
+    expect(payload.body).toContain('81,240')
+  })
+
+  it('tags the payload as a SMART_ALERT type carrying the alert id for dedup/routing', () => {
+    const alert = baseAlert({ id: 'abc-123' })
+    const payload = buildPushPayload(alert, emptySnapshot(), 'x')
+    expect(payload.type).toBe('SMART_ALERT')
+    expect(payload.alertId).toBe('abc-123')
+  })
+})
+
+describe('buildMetricLines', () => {
+  it('omits lines for metrics that are unavailable rather than printing null/NaN', () => {
+    const lines = buildMetricLines(emptySnapshot({ price: 100 }))
+    expect(lines).toEqual(['Price: $100'])
+  })
+
+  it('includes every populated timeframe bucket', () => {
+    const lines = buildMetricLines(emptySnapshot({ openInterestChangePct: { '15m': 1.2, '1h': -0.3 } }))
+    expect(lines).toContain('OI 15m: +1.20%')
+    expect(lines).toContain('OI 1h: -0.30%')
+  })
+})
+
+describe('toTriggeredEvent', () => {
+  it('carries the matched conditions and marks the event unread', () => {
+    const alert = baseAlert({ id: 'a1', name: 'Test' })
+    const event = toTriggeredEvent(alert, emptySnapshot(), alert.conditions, 1_000_000)
+    expect(event.alertId).toBe('a1')
+    expect(event.read).toBe(false)
+    expect(event.timestamp).toBe(1_000_000)
+  })
+
+  it('generates unique ids for two events fired back to back', () => {
+    const alert = baseAlert()
+    const e1 = toTriggeredEvent(alert, emptySnapshot(), [], 1_000_000)
+    const e2 = toTriggeredEvent(alert, emptySnapshot(), [], 1_000_001)
+    expect(e1.id).not.toBe(e2.id)
+  })
+})

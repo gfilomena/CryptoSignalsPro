@@ -129,6 +129,18 @@ export async function updateAlertPreferences(alertTypes: AlertType[]): Promise<v
   })
 }
 
+/** Device-level opt-in for Smart Alerts push, independent of the scalp engine's alertTypes list. */
+export async function updateSmartAlertsPushPreference(enabled: boolean): Promise<void> {
+  const registration = await navigator.serviceWorker.getRegistration()
+  const subscription = await registration?.pushManager.getSubscription()
+  if (!subscription || !hasSupabaseConfig) return
+  await edgeFetch('/push-subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'update_preferences', endpoint: subscription.endpoint, smartAlertsEnabled: enabled }),
+  })
+}
+
 export async function sendTestNotification(): Promise<void> {
   const registration = await navigator.serviceWorker.getRegistration()
   const subscription = await registration?.pushManager.getSubscription()

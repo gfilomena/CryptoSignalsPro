@@ -34,7 +34,16 @@ Deno.serve(async (req: Request) => {
 
     webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
     const subscription = { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } };
-    const payload = JSON.stringify({ title: "CryptoSignals Pro", body: "Notifiche attive — riceverai gli alert BTC/USDT qui.", type: "TEST" });
+    // kind "smart_alert" sends a sample in the real Smart Alert format (colour + direction hint)
+    const payload = JSON.stringify(
+      body.kind === "smart_alert"
+        ? {
+            title: "🟢 COMPRA · BTC/USDT — Reversal Watch (TEST)",
+            body: "Esempio di alert reale: così apparirà quando scatta.\nPrice change: -0.62%\nOI 15m: +1.43%\nNon è un consiglio finanziario",
+            type: "TEST",
+          }
+        : { title: "CryptoSignals Pro", body: "Notifiche attive — riceverai gli alert BTC/USDT qui.", type: "TEST" },
+    );
 
     await webpush.sendNotification(subscription, payload);
     return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });

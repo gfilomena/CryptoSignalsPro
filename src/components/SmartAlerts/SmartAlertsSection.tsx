@@ -6,7 +6,9 @@ import { AlertCard } from './AlertCard'
 import { PresetGrid } from './PresetGrid'
 import { HistoryList } from './HistoryList'
 import { AlertBuilderModal } from './AlertBuilderModal'
-import type { PresetId } from '../../lib/smartAlerts/presets'
+import { createAlertFromPreset, type PresetId } from '../../lib/smartAlerts/presets'
+
+const ESSENTIAL_PRESETS: PresetId[] = ['reversal_watch', 'strong_momentum', 'overheated_market']
 import {
   disableNotifications,
   enableNotifications,
@@ -49,6 +51,27 @@ export function SmartAlertsSection() {
     setBuilderState({ presetId })
     setTab('active')
   }
+
+  const missingEssentials = useMemo(
+    () => ESSENTIAL_PRESETS.filter((id) => !alerts.some((a) => a.name === t(`smartAlerts.preset.${id}.name`))),
+    [alerts, t],
+  )
+
+  const handleQuickStart = async () => {
+    for (const id of missingEssentials) {
+      await saveAlert(createAlertFromPreset(id, t(`smartAlerts.preset.${id}.name`), { symbol: 'BTC', mode: 'ALWAYS' }))
+    }
+    setTab('active')
+  }
+
+  const quickStart = (
+    <div className="bt-group">
+      <p className="bt-field-hint" style={{ marginBottom: 8 }}>{t('smartAlerts.builder.quickStartHint')}</p>
+      <button type="button" className="bt-run-btn" disabled={missingEssentials.length === 0} onClick={handleQuickStart}>
+        {missingEssentials.length === 0 ? t('smartAlerts.builder.quickStartDone') : t('smartAlerts.builder.quickStartBtn')}
+      </button>
+    </div>
+  )
 
   const handleEnablePush = async () => {
     setSettingsBusy(true)
@@ -165,7 +188,10 @@ export function SmartAlertsSection() {
 
       {tab === 'active' ? (
         alerts.length === 0 ? (
-          <p className="sa-empty">{t('smartAlerts.empty.active')}</p>
+          <>
+            <p className="sa-empty">{t('smartAlerts.empty.active')}</p>
+            {quickStart}
+          </>
         ) : (
           <div className="sa-cards-grid">
             {alerts.map((alert) => (
@@ -184,7 +210,12 @@ export function SmartAlertsSection() {
 
       {tab === 'triggered' ? <HistoryList events={history} onMarkRead={markRead} onDelete={deleteHistory} /> : null}
 
-      {tab === 'presets' ? <PresetGrid onUsePreset={handleUsePreset} /> : null}
+      {tab === 'presets' ? (
+        <>
+          {quickStart}
+          <PresetGrid onUsePreset={handleUsePreset} />
+        </>
+      ) : null}
 
       <p className="sa-disclaimer">{t('smartAlerts.disclaimer')}</p>
 

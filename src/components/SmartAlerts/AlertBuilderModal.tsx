@@ -34,6 +34,7 @@ export function AlertBuilderModal({ initial, presetId, presetName, onClose, onSa
   })
   const [step, setStep] = useState<'edit' | 'review'>('edit')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(false)
 
   const setMode = (mode: AlertMode) => {
     setDraft((d) => ({ ...d, mode, sessionDuration: mode === 'SESSION' ? (d.sessionDuration ?? '1h') : undefined }))
@@ -46,6 +47,7 @@ export function AlertBuilderModal({ initial, presetId, presetName, onClose, onSa
 
   const handleActivate = async () => {
     setSaving(true)
+    setSaveError(false)
     try {
       const now = Date.now()
       const finalAlert: SmartAlert = {
@@ -55,6 +57,8 @@ export function AlertBuilderModal({ initial, presetId, presetName, onClose, onSa
       }
       await onSave(finalAlert)
       onClose()
+    } catch {
+      setSaveError(true)
     } finally {
       setSaving(false)
     }
@@ -161,12 +165,14 @@ export function AlertBuilderModal({ initial, presetId, presetName, onClose, onSa
               </label>
             </div>
 
+            {!canSave ? <p className="bt-field-hint">{t('smartAlerts.builder.addAlertHint')}</p> : null}
+
             <div className="sa-modal-actions">
               <button type="button" className="sa-cancel" onClick={onClose}>
                 {t('smartAlerts.review.cancel')}
               </button>
               <button type="button" className="sa-primary" disabled={!canSave} onClick={() => setStep('review')}>
-                {t('smartAlerts.review.title')}
+                {t('smartAlerts.builder.addAlert')}
               </button>
             </div>
           </>
@@ -207,6 +213,8 @@ export function AlertBuilderModal({ initial, presetId, presetName, onClose, onSa
                 <span>{draft.pushEnabled ? t('smartAlerts.summary.on') : t('smartAlerts.summary.off')}</span>
               </div>
             </div>
+
+            {saveError ? <p className="bt-field-hint" style={{ color: '#ef4444' }}>{t('smartAlerts.builder.saveError')}</p> : null}
 
             <div className="sa-modal-actions">
               <button type="button" className="sa-cancel" onClick={() => setStep('edit')}>

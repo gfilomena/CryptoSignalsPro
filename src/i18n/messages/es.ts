@@ -653,6 +653,6 @@ export const es: MessageTree = {
       triggered: '{{name}} disparada',
       time: 'Hora',
     },
-    builder: { newTitle: 'Crear alerta inteligente', editTitle: 'Editar alerta inteligente' },
+    builder: { newTitle: 'Crear alerta inteligente', editTitle: 'Editar alerta inteligente', addAlert: 'Añadir alerta', addAlertHint: 'Introduce un nombre y añade al menos una condición.', quickStartBtn: 'Añadir las 3 alertas esenciales', quickStartHint: 'Reversal Watch (comprar), Strong Momentum (mantener/entrar), Overheated Market (vender). Ya configuradas, puedes editarlas cuando quieras.', quickStartDone: 'Ya añadidas', saveError: 'No se pudo guardar la alerta. Inténtalo de nuevo.' },
   },
 }

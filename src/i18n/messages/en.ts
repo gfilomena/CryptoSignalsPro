@@ -654,6 +654,6 @@ export const en: MessageTree = {
       triggered: '{{name}} triggered',
       time: 'Time',
     },
-    builder: { newTitle: 'Create Smart Alert', editTitle: 'Edit Smart Alert' },
+    builder: { newTitle: 'Create Smart Alert', editTitle: 'Edit Smart Alert', addAlert: 'Add Alert', addAlertHint: 'Enter a name and add at least one condition.', quickStartBtn: 'Add the 3 essential alerts', quickStartHint: 'Reversal Watch (buy), Strong Momentum (hold/enter), Overheated Market (sell). Pre-configured — edit them any time.', quickStartDone: 'Already added', saveError: 'Could not save the alert. Please try again.' },
   },
 }

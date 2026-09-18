@@ -61,3 +61,19 @@ describe('api.ts local fallback (Supabase not configured)', () => {
     expect(history[0].alertId).toBe('a1')
   })
 })
+
+describe('api.ts with Supabase configured', () => {
+  it('server is the source of truth: drops old local-only alerts, keeps ones created moments ago', async () => {
+    vi.resetModules()
+    vi.doMock('../../../config/env', () => ({ SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'k', hasSupabaseConfig: true }))
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })))
+    const api = await import('../api')
+    const store = await import('../alertStore')
+    const now = 10_000_000
+    store.upsertLocalAlert(baseAlert({ id: 'ghost', createdAt: now - 10 * 60_000 }))
+    store.upsertLocalAlert(baseAlert({ id: 'fresh', createdAt: now - 5_000 }))
+    const ids = (await api.listAlerts(now)).map((a) => a.id)
+    expect(ids).toEqual(['fresh'])
+    vi.doUnmock('../../../config/env')
+  })
+})

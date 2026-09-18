@@ -12,11 +12,15 @@ import {
   deleteLocalAlert,
   deleteLocalHistoryEvent,
   expireLocalSessions,
+  listLocalAlerts,
   listLocalHistory,
   markLocalHistoryRead,
   setLocalAlertEnabled,
   upsertLocalAlert,
 } from './alertStore'
+
+/** Local-only alerts younger than this are assumed to still be syncing rather than deleted elsewhere. */
+const LOCAL_ONLY_GRACE_MS = 2 * 60_000
 
 function restUrl(path: string): string {
   return `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1${path}`
@@ -102,7 +106,12 @@ export async function listAlerts(now = Date.now()): Promise<SmartAlert[]> {
     if (!res.ok) return local
     const rows = (await res.json()) as SmartAlertRow[]
     const alerts = rows.map(fromRow)
-    // Keep the local cache in sync so the app still works offline right after this load.
+    // The server is the source of truth: drop local copies it no longer has (deleted elsewhere), so
+    // stale alerts never resurface. Alerts created moments ago may not have synced yet — keep those.
+    const serverIds = new Set(alerts.map((a) => a.id))
+    for (const stale of listLocalAlerts()) {
+      if (!serverIds.has(stale.id) && now - stale.createdAt > LOCAL_ONLY_GRACE_MS) deleteLocalAlert(stale.id)
+    }
     for (const alert of alerts) upsertLocalAlert(alert)
     return expireLocalSessions(now)
   } catch {
@@ -125,7 +134,7 @@ async function pushAlertToServer(alert: SmartAlert): Promise<void> {
 
 export async function saveAlert(alert: SmartAlert): Promise<SmartAlert[]> {
   const alerts = upsertLocalAlert(alert)
-  void pushAlertToServer(alert)
+  await pushAlertToServer(alert)
   return alerts
 }
 

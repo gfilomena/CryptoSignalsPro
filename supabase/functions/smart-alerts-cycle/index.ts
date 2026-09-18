@@ -198,6 +198,12 @@ const CATEGORY_MESSAGES: Record<string, string> = {
   MARKET_STRENGTH: "Market strength conditions detected", CUSTOM: "Custom alert triggered",
 };
 
+// Keep in sync with directionLabel()/PUSH_DISCLAIMER in src/lib/smartAlerts/notificationCopy.ts
+const DIRECTION_LABELS: Record<string, string> = {
+  REVERSAL_WATCH: "🟢 COMPRA", MARKET_STRENGTH: "🟢 COMPRA/TIENI", OVERHEATED_MARKET: "🔴 VENDI",
+};
+const PUSH_DISCLAIMER = "Non è un consiglio finanziario";
+
 function buildPushBody(snapshot: MetricSnapshot, categoryMessage: string): string {
   const lines: string[] = [categoryMessage];
   if (snapshot.price !== null) lines.push(`Price: $${fmtPrice(snapshot.price)}`);
@@ -205,6 +211,7 @@ function buildPushBody(snapshot: MetricSnapshot, categoryMessage: string): strin
   for (const [tf, v] of Object.entries(snapshot.openInterestChangePct)) if (v !== null && v !== undefined) lines.push(`OI ${tf}: ${fmtPct(v)}`);
   if (snapshot.fundingRate !== null) lines.push(`Funding: ${fmtPct(snapshot.fundingRate)}`);
   for (const [tf, v] of Object.entries(snapshot.rsi)) if (v !== null && v !== undefined) lines.push(`RSI ${tf}: ${v.toFixed(0)}`);
+  lines.push(PUSH_DISCLAIMER);
   return lines.join("\n");
 }
 
@@ -219,7 +226,7 @@ async function sendSmartAlertPush(sb: ReturnType<typeof createClient>, row: Smar
   const { data: subs } = await sb.from("push_subscriptions").select("*").eq("smart_alerts_enabled", true);
   if (!subs || subs.length === 0) return { sent: 0, reason: "no_subscribers" };
 
-  const title = `${row.symbol}/USDT — ${row.name}`;
+  const title = `${DIRECTION_LABELS[row.category] ?? "⚪ NEUTRO"} · ${row.symbol}/USDT — ${row.name}`;
   const body = buildPushBody(snapshot, CATEGORY_MESSAGES[row.category] ?? "Alert conditions detected");
   const payload = JSON.stringify({ title, body, type: "SMART_ALERT", symbol: row.symbol, alertId: row.id, category: row.category });
 

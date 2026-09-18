@@ -1955,6 +1955,10 @@
             font-size: 0.88rem;
             cursor: pointer;
         }
+        .sa-modal-actions button.sa-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
         .sa-modal-actions button.sa-cancel {
             padding: 10px 18px;
             background: rgba(255,255,255,0.08);

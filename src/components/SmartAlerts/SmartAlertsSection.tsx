@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/useI18n'
 import type { SmartAlert } from '../../types/smartAlert'
 import { useSmartAlerts } from './useSmartAlerts'
@@ -6,7 +6,7 @@ import { AlertCard } from './AlertCard'
 import { PresetGrid } from './PresetGrid'
 import { HistoryList } from './HistoryList'
 import { AlertBuilderModal } from './AlertBuilderModal'
-import { createAlertFromPreset, type PresetId } from '../../lib/smartAlerts/presets'
+import { createAlertFromPreset, getPreset, type PresetId } from '../../lib/smartAlerts/presets'
 
 const ESSENTIAL_PRESETS: PresetId[] = ['reversal_watch', 'strong_momentum', 'overheated_market']
 import {
@@ -54,16 +54,24 @@ export function SmartAlertsSection() {
     setTab('active')
   }
 
+  // Language-independent: an essential preset counts as present if any BTC alert already has its category.
   const missingEssentials = useMemo(
-    () => ESSENTIAL_PRESETS.filter((id) => !alerts.some((a) => a.name === t(`smartAlerts.preset.${id}.name`))),
-    [alerts, t],
+    () => ESSENTIAL_PRESETS.filter((id) => !alerts.some((a) => a.symbol === 'BTC' && a.category === getPreset(id).category)),
+    [alerts],
   )
+  const quickStartBusy = useRef(false)
 
   const handleQuickStart = async () => {
-    for (const id of missingEssentials) {
-      await saveAlert(createAlertFromPreset(id, t(`smartAlerts.preset.${id}.name`), { symbol: 'BTC', mode: 'ALWAYS' }))
+    if (quickStartBusy.current) return // ignore double taps while the first run is still saving
+    quickStartBusy.current = true
+    try {
+      for (const id of missingEssentials) {
+        await saveAlert(createAlertFromPreset(id, t(`smartAlerts.preset.${id}.name`), { symbol: 'BTC', mode: 'ALWAYS' }))
+      }
+      setTab('active')
+    } finally {
+      quickStartBusy.current = false
     }
-    setTab('active')
   }
 
   const quickStart = (

@@ -1682,6 +1682,15 @@
         }
         .sa-badge.active { background: rgba(34,197,94,0.15); color: #22c55e; }
         .sa-badge.paused { background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .sa-confirming-badge {
+            font-size: 0.72rem;
+            color: #f59e0b;
+            background: rgba(245,158,11,0.12);
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin-top: 8px;
+            display: inline-block;
+        }
         .sa-card-conditions {
             display: flex;
             flex-direction: column;
@@ -1755,6 +1764,7 @@
             padding: 12px 14px;
         }
         .sa-history-item.is-unread { border-left: 3px solid #38bdf8; }
+        .sa-history-item.is-invalidated { border-left: 3px solid #94a3b8; opacity: 0.85; }
         .sa-history-top {
             display: flex;
             justify-content: space-between;

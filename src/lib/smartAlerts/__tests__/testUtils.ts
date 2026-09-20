@@ -32,6 +32,8 @@ export function baseAlert(overrides: Partial<SmartAlert> = {}): SmartAlert {
     cooldownMs: 15 * 60_000,
     pushEnabled: true,
     createdAt: 0,
+    confirmationCycles: 1,
+    pendingMatchCount: 0,
     ...overrides,
   }
 }

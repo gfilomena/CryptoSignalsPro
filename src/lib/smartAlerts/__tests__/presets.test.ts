@@ -37,10 +37,24 @@ describe('createAlertFromPreset', () => {
     expect(alert.conditions.find((c) => c.metric === 'RSI')?.threshold).toBe(80) // original untouched
   })
 
-  it('the Reversal Watch preset triggers on the example from the spec', () => {
+  it('the Reversal Watch preset triggers on the example from the spec when funding also confirms crowded shorts', () => {
     const alert = createAlertFromPreset('reversal_watch', 'Reversal Watch', { symbol: 'BTC', mode: 'ALWAYS' })
-    const snapshot = emptySnapshot({ priceChangePct: -0.62, openInterestChangePct: { '15m': 1.43 } })
+    const snapshot = emptySnapshot({ priceChangePct: -0.62, openInterestChangePct: { '15m': 1.43 }, fundingRate: -0.01 })
     expect(evaluateAlert(alert, snapshot).triggered).toBe(true)
+  })
+
+  it('the Reversal Watch preset does NOT trigger on price+OI alone when funding is still positive (fresh shorts, not a crowded reversal setup)', () => {
+    const alert = createAlertFromPreset('reversal_watch', 'Reversal Watch', { symbol: 'BTC', mode: 'ALWAYS' })
+    const snapshot = emptySnapshot({ priceChangePct: -0.62, openInterestChangePct: { '15m': 1.43 }, fundingRate: 0.01 })
+    expect(evaluateAlert(alert, snapshot).triggered).toBe(false)
+  })
+
+  it('every preset defaults to requiring 2 consecutive confirmation cycles (dampens single-tick noise)', () => {
+    for (const preset of PRESET_DEFINITIONS) {
+      const alert = createAlertFromPreset(preset.id, 'Test', { symbol: 'BTC', mode: 'ALWAYS' })
+      expect(alert.confirmationCycles).toBe(2)
+      expect(alert.pendingMatchCount).toBe(0)
+    }
   })
 
   it('sets expiresAt for a SESSION-mode preset and leaves it undefined for ALWAYS', () => {
@@ -57,5 +71,11 @@ describe('createCustomAlert', () => {
     expect(alert.conditions).toEqual([])
     expect(alert.category).toBe('CUSTOM')
     expect(alert.symbol).toBe('ETH')
+  })
+
+  it('defaults to a single confirmation cycle (fires on first match, unlike presets)', () => {
+    const alert = createCustomAlert('My alert', { symbol: 'ETH', mode: 'ALWAYS' })
+    expect(alert.confirmationCycles).toBe(1)
+    expect(alert.pendingMatchCount).toBe(0)
   })
 })

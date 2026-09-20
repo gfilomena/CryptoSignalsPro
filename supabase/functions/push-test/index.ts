@@ -34,12 +34,13 @@ Deno.serve(async (req: Request) => {
 
     webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
     const subscription = { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } };
-    // kind "smart_alert" sends a sample in the real Smart Alert format (colour + direction hint)
+    // kind "smart_alert" sends a sample in the real Smart Alert format (colour + bias hint — see
+    // directionLabel()/PUSH_DISCLAIMER in src/lib/smartAlerts/notificationCopy.ts, kept in sync here)
     const payload = JSON.stringify(
       body.kind === "smart_alert"
         ? {
-            title: "🟢 COMPRA · BTC/USDT — Reversal Watch (TEST)",
-            body: "Esempio di alert reale: così apparirà quando scatta.\nPrice change: -0.62%\nOI 15m: +1.43%\nNon è un consiglio finanziario",
+            title: "🟢 Bias rialzista · BTC/USDT — Reversal Watch (TEST)",
+            body: "Esempio di alert reale: così apparirà quando scatta.\nPrice change: -0.62%\nOI 15m: +1.43%\nSegnale informativo, non un consiglio finanziario né un ordine operativo",
             type: "TEST",
           }
         : { title: "CryptoSignals Pro", body: "Notifiche attive — riceverai gli alert BTC/USDT qui.", type: "TEST" },

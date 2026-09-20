@@ -40,22 +40,30 @@ export function buildMetricLines(snapshot: MetricSnapshot): string[] {
   return lines
 }
 
-/** Direction hint shown at the start of the push title. Push copy is generated server-side with no
- * per-user language, so labels are fixed (Italian) — keep in sync with supabase/functions/smart-alerts-cycle. */
+/** Direction hint shown at the start of the push title. Deliberately phrased as a *bias*, never an
+ * instruction — "COMPRA"/"VENDI" (buy/sell) were tried and reverted: the underlying signals have
+ * weak, time-decaying predictive power (see the reliability research on this feature), so an
+ * imperative buy/sell label overstates the confidence the data actually supports. Push copy is
+ * generated server-side with no per-user language, so labels are fixed (Italian) — keep in sync
+ * with supabase/functions/smart-alerts-cycle. */
 export function directionLabel(category: AlertCategory): string {
   switch (category) {
     case 'REVERSAL_WATCH':
-      return '🟢 COMPRA'
+      return '🟢 Bias rialzista'
     case 'MARKET_STRENGTH':
-      return '🟢 COMPRA/TIENI'
+      return '🟢 Bias rialzista'
     case 'OVERHEATED_MARKET':
-      return '🔴 VENDI'
+      return '🔴 Bias ribassista'
     default:
-      return '⚪ NEUTRO'
+      return '⚪ Neutro'
   }
 }
 
-export const PUSH_DISCLAIMER = 'Non è un consiglio finanziario'
+export const PUSH_DISCLAIMER = 'Segnale informativo, non un consiglio finanziario né un ordine operativo'
+
+/** Title prefix for an "invalidated" event — no direction hint here: the setup that prompted the
+ * original bias is gone, so implying a direction again would be misleading. */
+export const INVALIDATION_PREFIX = '↩️ Non più valido'
 
 export interface PushPayload {
   title: string
@@ -77,7 +85,22 @@ export function buildPushPayload(alert: SmartAlert, snapshot: MetricSnapshot, ca
   return { title, body, type: 'SMART_ALERT', symbol: alert.symbol, alertId: alert.id, category: alert.category }
 }
 
-export function toTriggeredEvent(alert: SmartAlert, snapshot: MetricSnapshot, matched: SmartAlert['conditions'], now: number): TriggeredAlertEvent {
+/** Builds the (lower-key, no direction hint) push payload for an "invalidated" event — the alert
+ * had fired and its conditions no longer hold. */
+export function buildInvalidationPushPayload(alert: SmartAlert, snapshot: MetricSnapshot): PushPayload {
+  const title = `${INVALIDATION_PREFIX} · ${alert.symbol}/USDT — ${alert.name}`
+  const lines = buildMetricLines(snapshot)
+  const body = ['Le condizioni che avevano fatto scattare questo alert non sono più valide.', ...lines, PUSH_DISCLAIMER].join('\n')
+  return { title, body, type: 'SMART_ALERT', symbol: alert.symbol, alertId: alert.id, category: alert.category }
+}
+
+export function toTriggeredEvent(
+  alert: SmartAlert,
+  snapshot: MetricSnapshot,
+  matched: SmartAlert['conditions'],
+  now: number,
+  kind: TriggeredAlertEvent['kind'] = 'triggered',
+): TriggeredAlertEvent {
   const id =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
@@ -88,6 +111,7 @@ export function toTriggeredEvent(alert: SmartAlert, snapshot: MetricSnapshot, ma
     alertName: alert.name,
     category: alert.category,
     symbol: alert.symbol,
+    kind,
     matchedConditions: matched,
     snapshot,
     timestamp: now,

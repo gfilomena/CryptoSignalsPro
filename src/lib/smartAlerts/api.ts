@@ -51,6 +51,9 @@ interface SmartAlertRow {
   expires_at: string | null
   last_triggered_at: string | null
   session_expired: boolean
+  confirmation_cycles: number
+  pending_match_count: number
+  last_invalidated_at: string | null
 }
 
 function toRow(alert: SmartAlert): SmartAlertRow {
@@ -70,6 +73,9 @@ function toRow(alert: SmartAlert): SmartAlertRow {
     expires_at: alert.expiresAt ? new Date(alert.expiresAt).toISOString() : null,
     last_triggered_at: alert.lastTriggeredAt ? new Date(alert.lastTriggeredAt).toISOString() : null,
     session_expired: alert.sessionExpired ?? false,
+    confirmation_cycles: alert.confirmationCycles,
+    pending_match_count: alert.pendingMatchCount,
+    last_invalidated_at: alert.lastInvalidatedAt ? new Date(alert.lastInvalidatedAt).toISOString() : null,
   }
 }
 
@@ -90,6 +96,9 @@ function fromRow(row: SmartAlertRow): SmartAlert {
     expiresAt: row.expires_at ? new Date(row.expires_at).getTime() : undefined,
     lastTriggeredAt: row.last_triggered_at ? new Date(row.last_triggered_at).getTime() : undefined,
     sessionExpired: row.session_expired,
+    confirmationCycles: row.confirmation_cycles ?? 1,
+    pendingMatchCount: row.pending_match_count ?? 0,
+    lastInvalidatedAt: row.last_invalidated_at ? new Date(row.last_invalidated_at).getTime() : undefined,
   }
 }
 
@@ -172,6 +181,7 @@ interface HistoryRow {
   alert_name: string
   category: string
   symbol: string
+  kind: TriggeredAlertEvent['kind'] | null
   matched_conditions: TriggeredAlertEvent['matchedConditions']
   snapshot: TriggeredAlertEvent['snapshot']
   created_at: string
@@ -185,6 +195,8 @@ function historyFromRow(row: HistoryRow): TriggeredAlertEvent {
     alertName: row.alert_name,
     category: row.category as TriggeredAlertEvent['category'],
     symbol: row.symbol,
+    // Rows created before invalidation tracking existed have no `kind` column value yet.
+    kind: row.kind ?? 'triggered',
     matchedConditions: row.matched_conditions,
     snapshot: row.snapshot,
     timestamp: new Date(row.created_at).getTime(),

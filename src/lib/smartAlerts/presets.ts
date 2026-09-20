@@ -9,6 +9,10 @@ export interface PresetDefinition {
   category: AlertCategory
   operator: LogicalOperator
   defaultCooldownMs: number
+  /** Consecutive matching cycles required before firing — presets default to 2 (rather than the
+   * bare-minimum 1) so a single noisy tick on a fast-moving metric (price, RSI) doesn't fire the
+   * alert on its own; see conditionEngine.processAlert. */
+  defaultConfirmationCycles: number
   conditions: Array<Omit<AlertCondition, 'id' | 'enabled'>>
 }
 
@@ -22,9 +26,14 @@ export const PRESET_DEFINITIONS: PresetDefinition[] = [
     category: 'REVERSAL_WATCH',
     operator: 'AND',
     defaultCooldownMs: min(15),
+    defaultConfirmationCycles: 2,
     conditions: [
       { metric: 'PRICE_CHANGE', operator: '<=', threshold: -0.5 },
       { metric: 'OPEN_INTEREST_CHANGE', timeframe: '15m', operator: '>=', threshold: 1 },
+      // Price down + OI up alone is the textbook "new shorts / bearish continuation" quadrant, not
+      // a reversal setup. Requiring funding already negative (shorts paying to hold) is what turns
+      // it into a genuine crowded-short/reversal signal instead of just confirming the downtrend.
+      { metric: 'FUNDING_RATE', operator: '<=', threshold: 0 },
     ],
   },
   {
@@ -32,6 +41,7 @@ export const PRESET_DEFINITIONS: PresetDefinition[] = [
     category: 'OVERHEATED_MARKET',
     operator: 'AND',
     defaultCooldownMs: min(30),
+    defaultConfirmationCycles: 2,
     conditions: [
       { metric: 'RSI', timeframe: '1h', operator: '>=', threshold: 80 },
       { metric: 'OPEN_INTEREST_CHANGE', timeframe: '15m', operator: '>=', threshold: 1 },
@@ -43,6 +53,7 @@ export const PRESET_DEFINITIONS: PresetDefinition[] = [
     category: 'LIQUIDATION',
     operator: 'AND',
     defaultCooldownMs: min(15),
+    defaultConfirmationCycles: 2,
     conditions: [
       { metric: 'PRICE_CHANGE', operator: '<=', threshold: -0.5 },
       { metric: 'LONG_LIQUIDATIONS', operator: '>=', threshold: 5_000_000 },
@@ -54,6 +65,7 @@ export const PRESET_DEFINITIONS: PresetDefinition[] = [
     category: 'LIQUIDATION',
     operator: 'AND',
     defaultCooldownMs: min(15),
+    defaultConfirmationCycles: 2,
     conditions: [
       { metric: 'PRICE_CHANGE', operator: '>=', threshold: 0.5 },
       { metric: 'SHORT_LIQUIDATIONS', operator: '>=', threshold: 5_000_000 },
@@ -65,6 +77,7 @@ export const PRESET_DEFINITIONS: PresetDefinition[] = [
     category: 'MARKET_STRENGTH',
     operator: 'AND',
     defaultCooldownMs: min(30),
+    defaultConfirmationCycles: 2,
     conditions: [
       { metric: 'PRICE_CHANGE', operator: '>=', threshold: 0.5 },
       { metric: 'VOLUME_CHANGE', timeframe: '15m', operator: '>=', threshold: 20 },
@@ -111,6 +124,8 @@ export function createAlertFromPreset(presetId: PresetId, name: string, opts: Cr
     createdAt: now,
     expiresAt: computeExpiresAt(opts.mode, opts.sessionDuration, now),
     conditions: preset.conditions.map((c) => ({ ...c, id: genId(), enabled: true })),
+    confirmationCycles: preset.defaultConfirmationCycles,
+    pendingMatchCount: 0,
   }
 }
 
@@ -131,6 +146,8 @@ export function createCustomAlert(name: string, opts: CreateAlertFromPresetOptio
     createdAt: now,
     expiresAt: computeExpiresAt(opts.mode, opts.sessionDuration, now),
     conditions: [],
+    confirmationCycles: 1,
+    pendingMatchCount: 0,
   }
 }
 

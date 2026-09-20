@@ -79,6 +79,20 @@ export function recordLocalTrigger(id: string, timestamp: number): SmartAlert[] 
   return next
 }
 
+export function recordLocalInvalidation(id: string, timestamp: number): SmartAlert[] {
+  const next = listLocalAlerts().map((a) => (a.id === id ? { ...a, lastInvalidatedAt: timestamp } : a))
+  saveLocalAlerts(next)
+  return next
+}
+
+/** Persists the confirmation counter every cycle regardless of whether the alert fired, so a
+ * partially-confirmed streak (e.g. 1 of 2 required cycles) survives into the next evaluation. */
+export function updateLocalAlertConfirmation(id: string, pendingMatchCount: number): SmartAlert[] {
+  const next = listLocalAlerts().map((a) => (a.id === id ? { ...a, pendingMatchCount } : a))
+  saveLocalAlerts(next)
+  return next
+}
+
 export function listLocalHistory(): TriggeredAlertEvent[] {
   return readJson<TriggeredAlertEvent[]>(HISTORY_KEY, [])
 }

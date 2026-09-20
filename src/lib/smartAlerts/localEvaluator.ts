@@ -5,9 +5,9 @@
 import type { AlertCategory, MetricSnapshot, SmartAlert, TriggeredAlertEvent } from '../../types/smartAlert'
 import { processAlert } from './conditionEngine'
 import { fetchSmartAlertSnapshot } from './marketData'
-import { buildPushPayload, toTriggeredEvent } from './notificationCopy'
+import { buildInvalidationPushPayload, buildPushPayload, toTriggeredEvent } from './notificationCopy'
 import { recordHistoryEvent } from './api'
-import { recordLocalTrigger } from './alertStore'
+import { recordLocalInvalidation, recordLocalTrigger, updateLocalAlertConfirmation } from './alertStore'
 import { showLocalNotification } from './localPush'
 
 /** Neutral monitoring copy per category — see spec §10/§17 (never "BUY"/"SELL"). Exported so the
@@ -50,16 +50,30 @@ export async function runLocalAlertCycle(alerts: SmartAlert[], now = Date.now())
     const snapshot = snapshots[alert.symbol]
     if (!snapshot) continue
     const result = processAlert(alert, snapshot, now)
-    if (!result.shouldFire) continue
 
-    const event = toTriggeredEvent(alert, snapshot, result.evaluation.matchedConditions, now)
-    await recordHistoryEvent(event)
-    recordLocalTrigger(alert.id, now)
-    triggeredEvents.push(event)
+    // Persist the confirmation counter every cycle, whether or not it fired, so a
+    // partially-confirmed streak survives into the next evaluation.
+    updateLocalAlertConfirmation(alert.id, result.nextPendingMatchCount)
 
-    if (alert.pushEnabled) {
-      const payload = buildPushPayload(alert, snapshot, CATEGORY_MESSAGES[alert.category])
-      void showLocalNotification(payload)
+    if (result.shouldFire) {
+      const event = toTriggeredEvent(alert, snapshot, result.evaluation.matchedConditions, now, 'triggered')
+      await recordHistoryEvent(event)
+      recordLocalTrigger(alert.id, now)
+      triggeredEvents.push(event)
+
+      if (alert.pushEnabled) {
+        const payload = buildPushPayload(alert, snapshot, CATEGORY_MESSAGES[alert.category])
+        void showLocalNotification(payload)
+      }
+    } else if (result.shouldInvalidate) {
+      const event = toTriggeredEvent(alert, snapshot, result.evaluation.matchedConditions, now, 'invalidated')
+      await recordHistoryEvent(event)
+      recordLocalInvalidation(alert.id, now)
+      triggeredEvents.push(event)
+
+      if (alert.pushEnabled) {
+        void showLocalNotification(buildInvalidationPushPayload(alert, snapshot))
+      }
     }
   }
 

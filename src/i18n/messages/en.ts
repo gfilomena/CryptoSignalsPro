@@ -594,6 +594,14 @@ export const en: MessageTree = {
       min60: '1 hour',
       min240: '4 hours',
     },
+    confirmation: {
+      label: 'Confirmation',
+      hint: 'Require the conditions to hold for this many consecutive checks before firing — absorbs a single noisy reading instead of acting on it right away.',
+      cycles1: 'Immediate (1 check)',
+      cycles2: '2 consecutive checks',
+      cycles3: '3 consecutive checks',
+      progress: 'Confirming ({{count}}/{{required}})',
+    },
     push: { label: 'Push Notifications', testBtn: 'Test alert' },
     name: { label: 'Alert name', placeholder: 'e.g. BTC Reversal Watch' },
     review: {
@@ -612,7 +620,7 @@ export const en: MessageTree = {
       editableHint: 'All thresholds stay fully editable after you pick a preset.',
       reversal_watch: {
         name: 'Reversal Watch',
-        description: 'Price weakening while Open Interest keeps increasing — potential shift in positioning.',
+        description: 'Price weakening while Open Interest keeps increasing and funding is already negative — shorts crowding into an already short-heavy market, a classic setup ahead of a possible squeeze/reversal.',
       },
       overheated_market: {
         name: 'Overheated Market',
@@ -652,8 +660,9 @@ export const en: MessageTree = {
       viewDetails: 'View details',
       hideDetails: 'Hide details',
       triggered: '{{name}} triggered',
+      invalidated: '{{name}} — conditions no longer met',
       time: 'Time',
     },
-    builder: { newTitle: 'Create Smart Alert', editTitle: 'Edit Smart Alert', addAlert: 'Add Alert', addAlertHint: 'Enter a name and add at least one condition.', quickStartBtn: 'Add the 3 essential alerts', quickStartHint: 'Reversal Watch (buy), Strong Momentum (hold/enter), Overheated Market (sell). Pre-configured — edit them any time.', quickStartDone: 'Already added', saveError: 'Could not save the alert. Please try again.' },
+    builder: { newTitle: 'Create Smart Alert', editTitle: 'Edit Smart Alert', addAlert: 'Add Alert', addAlertHint: 'Enter a name and add at least one condition.', quickStartBtn: 'Add the 3 essential alerts', quickStartHint: 'Reversal Watch (bullish bias), Strong Momentum (bullish bias), Overheated Market (bearish bias) — informational only, not a buy/sell instruction. Pre-configured — edit them any time.', quickStartDone: 'Already added', saveError: 'Could not save the alert. Please try again.' },
   },
 }

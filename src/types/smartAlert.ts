@@ -88,6 +88,16 @@ export interface SmartAlert {
   lastTriggeredAt?: number
   /** True once a SESSION alert's window has elapsed and it was auto-disabled. */
   sessionExpired?: boolean
+  /** Consecutive matching evaluation cycles required before the alert is allowed to fire — dampens
+   * a single noisy tick (a momentary wick, a stale print) from causing a false trigger. 1 = fire
+   * on the first match, same as the original single-shot behavior. */
+  confirmationCycles: number
+  /** Runtime bookkeeping: how many consecutive cycles the alert has currently matched for. Reset
+   * to 0 the instant it stops matching. Persisted so the count survives across evaluation cycles. */
+  pendingMatchCount: number
+  /** Cooldown bookkeeping for the "conditions no longer met" invalidation event, separate from
+   * lastTriggeredAt so the two notification kinds don't share a cooldown clock. */
+  lastInvalidatedAt?: number
 }
 
 /** A snapshot of every metric value a condition might reference, at one point in time. A value
@@ -117,13 +127,20 @@ export interface AlertEvaluation {
   unavailableConditions: AlertCondition[]
 }
 
-/** A record of an alert having actually fired (for the "Triggered Alerts" / History section). */
+/** 'triggered' = conditions matched (the original, only kind before invalidation tracking existed
+ * — older persisted rows may lack this field entirely; treat a missing value as 'triggered').
+ * 'invalidated' = an alert that had fired stopped matching its conditions. */
+export type TriggeredEventKind = 'triggered' | 'invalidated'
+
+/** A record of an alert having actually fired, or having stopped matching after firing (for the
+ * "Triggered Alerts" / History section). */
 export interface TriggeredAlertEvent {
   id: string
   alertId: string
   alertName: string
   category: AlertCategory
   symbol: string
+  kind: TriggeredEventKind
   matchedConditions: AlertCondition[]
   snapshot: MetricSnapshot
   timestamp: number

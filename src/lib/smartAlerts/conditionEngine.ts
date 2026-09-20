@@ -110,20 +110,53 @@ export function computeExpiresAt(mode: 'ALWAYS' | 'SESSION', sessionDuration: Se
   return now + SESSION_DURATION_MS[sessionDuration]
 }
 
+export function isInvalidationCooldown(alert: SmartAlert, now: number): boolean {
+  if (!alert.lastInvalidatedAt) return false
+  return now - alert.lastInvalidatedAt < alert.cooldownMs
+}
+
 export interface AlertProcessResult {
   evaluation: AlertEvaluation
   /** Session window elapsed — the alert should be shown/persisted as paused, never fired. */
   expired: boolean
   inCooldown: boolean
-  /** True only when the alert is enabled, not expired, matched, and outside its cooldown window —
-   * this is the single gate that should ever cause a push notification / history row. */
+  /** True only when the alert is enabled, not expired, confirmed (matched for confirmationCycles
+   * consecutive cycles), and outside its cooldown window — the single gate that should ever cause
+   * a push notification / "triggered" history row. */
   shouldFire: boolean
+  /** The confirmation counter to persist for the next cycle regardless of whether it fired —
+   * callers must write this back onto the stored alert (see localEvaluator.ts / smart-alerts-cycle). */
+  nextPendingMatchCount: number
+  /** True exactly once, the cycle a previously-fired alert's active match streak breaks — the gate
+   * for an "invalidated" history row (see spec: alerts should tell you when a call no longer holds). */
+  shouldInvalidate: boolean
 }
 
+/**
+ * Advances one evaluation cycle for an alert. Firing requires the conditions to have matched for
+ * `confirmationCycles` consecutive calls (default 1 = fires on the first match, the original
+ * behavior) — this absorbs a single noisy/stale data point instead of firing on it directly.
+ * Invalidation fires once, the cycle an alert that had already notified the user stops matching.
+ */
 export function processAlert(alert: SmartAlert, snapshot: MetricSnapshot, now: number): AlertProcessResult {
   const expired = isSessionExpired(alert, now)
   const evaluation = evaluateAlert(alert, snapshot)
   const inCooldown = isInCooldown(alert, now)
-  const shouldFire = alert.enabled && !expired && evaluation.triggered && !inCooldown
-  return { evaluation, expired, inCooldown, shouldFire }
+
+  const prevPendingMatchCount = alert.pendingMatchCount ?? 0
+  const nextPendingMatchCount = evaluation.triggered ? prevPendingMatchCount + 1 : 0
+  const requiredCycles = Math.max(1, alert.confirmationCycles ?? 1)
+  const confirmed = nextPendingMatchCount >= requiredCycles
+
+  const shouldFire = alert.enabled && !expired && confirmed && !inCooldown
+
+  const shouldInvalidate =
+    alert.enabled &&
+    !expired &&
+    !evaluation.triggered &&
+    prevPendingMatchCount > 0 &&
+    Boolean(alert.lastTriggeredAt) &&
+    !isInvalidationCooldown(alert, now)
+
+  return { evaluation, expired, inCooldown, shouldFire, nextPendingMatchCount, shouldInvalidate }
 }

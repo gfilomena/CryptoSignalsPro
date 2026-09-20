@@ -28,12 +28,16 @@ export function HistoryList({ events, onMarkRead, onDelete }: Props) {
     <div className="sa-history-list">
       {events.map((event) => {
         const isOpen = expanded.has(event.id)
+        // Older persisted rows may predate invalidation tracking and carry no kind — treat as triggered.
+        const isInvalidated = event.kind === 'invalidated'
         return (
-          <div className={`sa-history-item ${event.read ? '' : 'is-unread'}`} key={event.id}>
+          <div className={`sa-history-item ${event.read ? '' : 'is-unread'} ${isInvalidated ? 'is-invalidated' : ''}`} key={event.id}>
             <div className="sa-history-top">
               <div>
                 <div className="sa-history-title">{event.symbol}/USDT</div>
-                <div style={{ fontSize: '0.82rem', opacity: 0.75 }}>{t('smartAlerts.history.triggered', { name: event.alertName })}</div>
+                <div style={{ fontSize: '0.82rem', opacity: 0.75 }}>
+                  {isInvalidated ? `↩️ ${t('smartAlerts.history.invalidated', { name: event.alertName })}` : t('smartAlerts.history.triggered', { name: event.alertName })}
+                </div>
               </div>
               <div className="sa-history-time">{whaleTimeAgo(Math.floor(event.timestamp / 1000), t)}</div>
             </div>

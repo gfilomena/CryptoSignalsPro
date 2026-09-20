@@ -191,3 +191,97 @@ describe('processAlert — the single gate for firing', () => {
     expect(result.shouldFire).toBe(false)
   })
 })
+
+describe('processAlert — confirmation cycles (multi-tick hysteresis)', () => {
+  const matchingSnapshot = emptySnapshot({ priceChangePct: -1 })
+  const notMatchingSnapshot = emptySnapshot({ priceChangePct: 1 })
+  const alert = baseAlert({
+    confirmationCycles: 3,
+    operator: 'AND',
+    conditions: [newCondition({ metric: 'PRICE_CHANGE', operator: '<=', threshold: -0.5 })],
+  })
+
+  it('does not fire on the first match when more than 1 cycle is required', () => {
+    const result = processAlert(alert, matchingSnapshot, 1_000_000)
+    expect(result.nextPendingMatchCount).toBe(1)
+    expect(result.shouldFire).toBe(false)
+  })
+
+  it('fires only once the match streak reaches the required cycle count', () => {
+    let a = alert
+    let result = processAlert(a, matchingSnapshot, 1_000_000)
+    a = { ...a, pendingMatchCount: result.nextPendingMatchCount }
+    expect(result.shouldFire).toBe(false)
+
+    result = processAlert(a, matchingSnapshot, 1_000_060)
+    a = { ...a, pendingMatchCount: result.nextPendingMatchCount }
+    expect(result.nextPendingMatchCount).toBe(2)
+    expect(result.shouldFire).toBe(false)
+
+    result = processAlert(a, matchingSnapshot, 1_000_120)
+    expect(result.nextPendingMatchCount).toBe(3)
+    expect(result.shouldFire).toBe(true)
+  })
+
+  it('resets the streak to 0 the moment a cycle does not match', () => {
+    const midStreak = { ...alert, pendingMatchCount: 2 }
+    const result = processAlert(midStreak, notMatchingSnapshot, 1_000_000)
+    expect(result.nextPendingMatchCount).toBe(0)
+    expect(result.shouldFire).toBe(false)
+  })
+
+  it('confirmationCycles of 1 fires on the very first match (original single-shot behavior)', () => {
+    const singleShot = { ...alert, confirmationCycles: 1 }
+    const result = processAlert(singleShot, matchingSnapshot, 1_000_000)
+    expect(result.shouldFire).toBe(true)
+  })
+})
+
+describe('processAlert — invalidation', () => {
+  const matchingSnapshot = emptySnapshot({ priceChangePct: -1 })
+  const notMatchingSnapshot = emptySnapshot({ priceChangePct: 1 })
+  const firedAlert = baseAlert({
+    lastTriggeredAt: 900_000,
+    pendingMatchCount: 3,
+    operator: 'AND',
+    conditions: [newCondition({ metric: 'PRICE_CHANGE', operator: '<=', threshold: -0.5 })],
+  })
+
+  it('flags shouldInvalidate once when a previously-fired alert stops matching', () => {
+    const result = processAlert(firedAlert, notMatchingSnapshot, 1_000_000)
+    expect(result.shouldInvalidate).toBe(true)
+    expect(result.nextPendingMatchCount).toBe(0)
+  })
+
+  it('never invalidates an alert that never fired (lastTriggeredAt unset)', () => {
+    const neverFired = { ...firedAlert, lastTriggeredAt: undefined }
+    const result = processAlert(neverFired, notMatchingSnapshot, 1_000_000)
+    expect(result.shouldInvalidate).toBe(false)
+  })
+
+  it('never invalidates while conditions are still matching', () => {
+    const result = processAlert(firedAlert, matchingSnapshot, 1_000_000)
+    expect(result.shouldInvalidate).toBe(false)
+  })
+
+  it('only fires the invalidation once — the next cycle pendingMatchCount is already 0', () => {
+    const first = processAlert(firedAlert, notMatchingSnapshot, 1_000_000)
+    expect(first.shouldInvalidate).toBe(true)
+    const afterBreak = { ...firedAlert, pendingMatchCount: first.nextPendingMatchCount }
+    const second = processAlert(afterBreak, notMatchingSnapshot, 1_000_060)
+    expect(second.shouldInvalidate).toBe(false)
+  })
+
+  it('respects its own cooldown (lastInvalidatedAt), independent of the trigger cooldown', () => {
+    const recentlyInvalidated = { ...firedAlert, lastInvalidatedAt: 999_000, cooldownMs: 60_000 }
+    const result = processAlert(recentlyInvalidated, notMatchingSnapshot, 1_000_000)
+    expect(result.shouldInvalidate).toBe(false)
+  })
+
+  it('never invalidates a disabled or session-expired alert', () => {
+    const disabled = { ...firedAlert, enabled: false }
+    expect(processAlert(disabled, notMatchingSnapshot, 1_000_000).shouldInvalidate).toBe(false)
+    const expired = { ...firedAlert, mode: 'SESSION' as const, expiresAt: 500_000 }
+    expect(processAlert(expired, notMatchingSnapshot, 1_000_000).shouldInvalidate).toBe(false)
+  })
+})

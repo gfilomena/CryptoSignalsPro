@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { buildMetricLines, buildPushPayload, directionLabel, toTriggeredEvent } from '../notificationCopy'
+import { buildInvalidationPushPayload, buildMetricLines, buildPushPayload, directionLabel, PUSH_DISCLAIMER, toTriggeredEvent } from '../notificationCopy'
 import { baseAlert, emptySnapshot } from './testUtils'
 
-const BANNED_WORDS = ['execute trade', 'place order', 'buy btc', 'sell btc']
+const BANNED_WORDS = ['execute trade', 'place order', 'buy btc', 'sell btc', 'compra', 'vendi', 'BUY', 'SELL']
 
 describe('buildPushPayload', () => {
   it('never contains an automated trade-execution instruction', () => {
@@ -34,18 +34,18 @@ describe('buildPushPayload', () => {
 })
 
 describe('directionLabel', () => {
-  it('maps preset categories to a colour + direction hint, everything else neutral', () => {
-    expect(directionLabel('REVERSAL_WATCH')).toBe('🟢 COMPRA')
-    expect(directionLabel('MARKET_STRENGTH')).toBe('🟢 COMPRA/TIENI')
-    expect(directionLabel('OVERHEATED_MARKET')).toBe('🔴 VENDI')
-    expect(directionLabel('LIQUIDATION')).toBe('⚪ NEUTRO')
-    expect(directionLabel('CUSTOM')).toBe('⚪ NEUTRO')
+  it('maps preset categories to a colour + bias hint (never an imperative buy/sell), everything else neutral', () => {
+    expect(directionLabel('REVERSAL_WATCH')).toBe('🟢 Bias rialzista')
+    expect(directionLabel('MARKET_STRENGTH')).toBe('🟢 Bias rialzista')
+    expect(directionLabel('OVERHEATED_MARKET')).toBe('🔴 Bias ribassista')
+    expect(directionLabel('LIQUIDATION')).toBe('⚪ Neutro')
+    expect(directionLabel('CUSTOM')).toBe('⚪ Neutro')
   })
 
   it('puts the label first in the title and a disclaimer last in the body', () => {
     const payload = buildPushPayload(baseAlert({ category: 'OVERHEATED_MARKET', name: 'Overheated Market' }), emptySnapshot({ price: 100 }), 'x')
-    expect(payload.title.startsWith('🔴 VENDI · BTC/USDT')).toBe(true)
-    expect(payload.body.endsWith('Non è un consiglio finanziario')).toBe(true)
+    expect(payload.title.startsWith('🔴 Bias ribassista · BTC/USDT')).toBe(true)
+    expect(payload.body.endsWith(PUSH_DISCLAIMER)).toBe(true)
   })
 })
 
@@ -62,6 +62,18 @@ describe('buildMetricLines', () => {
   })
 })
 
+describe('buildInvalidationPushPayload', () => {
+  it('never repeats the direction bias and never contains a buy/sell word', () => {
+    const alert = baseAlert({ symbol: 'BTC', name: 'Reversal Watch', category: 'REVERSAL_WATCH' })
+    const payload = buildInvalidationPushPayload(alert, emptySnapshot({ price: 80000, priceChangePct: 0.1 }))
+    expect(payload.title).not.toContain('Bias')
+    for (const banned of BANNED_WORDS) {
+      expect(`${payload.title} ${payload.body}`.toUpperCase()).not.toContain(banned.toUpperCase())
+    }
+    expect(payload.body).toContain(PUSH_DISCLAIMER)
+  })
+})
+
 describe('toTriggeredEvent', () => {
   it('carries the matched conditions and marks the event unread', () => {
     const alert = baseAlert({ id: 'a1', name: 'Test' })
@@ -69,6 +81,14 @@ describe('toTriggeredEvent', () => {
     expect(event.alertId).toBe('a1')
     expect(event.read).toBe(false)
     expect(event.timestamp).toBe(1_000_000)
+  })
+
+  it('defaults to kind "triggered" and accepts an explicit "invalidated" kind', () => {
+    const alert = baseAlert({ id: 'a1' })
+    const triggered = toTriggeredEvent(alert, emptySnapshot(), [], 1_000_000)
+    expect(triggered.kind).toBe('triggered')
+    const invalidated = toTriggeredEvent(alert, emptySnapshot(), [], 1_000_000, 'invalidated')
+    expect(invalidated.kind).toBe('invalidated')
   })
 
   it('generates unique ids for two events fired back to back', () => {

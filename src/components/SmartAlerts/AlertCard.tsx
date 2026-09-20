@@ -26,6 +26,12 @@ export function AlertCard({ alert, snapshot, onEdit, onTogglePause, onDelete }: 
         </span>
       </div>
 
+      {isActive && alert.confirmationCycles > 1 && alert.pendingMatchCount > 0 && alert.pendingMatchCount < alert.confirmationCycles ? (
+        <div className="sa-confirming-badge">
+          ⏳ {t('smartAlerts.confirmation.progress', { count: alert.pendingMatchCount, required: alert.confirmationCycles })}
+        </div>
+      ) : null}
+
       <div className="sa-card-conditions">
         <div style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{t('smartAlerts.card.conditions')}</div>
         {alert.conditions

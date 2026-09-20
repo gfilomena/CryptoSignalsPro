@@ -159,6 +159,20 @@ export function AlertBuilderModal({ initial, presetId, presetName, onClose, onSa
             </div>
 
             <div className="bt-field-row">
+              <label className="bt-field bt-field-control">
+                {t('smartAlerts.confirmation.label')}
+                <select value={draft.confirmationCycles} onChange={(e) => setDraft((d) => ({ ...d, confirmationCycles: +e.target.value }))}>
+                  {[1, 2, 3].map((n) => (
+                    <option key={n} value={n}>
+                      {t(`smartAlerts.confirmation.cycles${n}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="bt-field-hint">{t('smartAlerts.confirmation.hint')}</p>
+            </div>
+
+            <div className="bt-field-row">
               <label className="bt-asset-chip" style={{ padding: '6px 10px' }}>
                 <input type="checkbox" checked={draft.pushEnabled} onChange={(e) => setDraft((d) => ({ ...d, pushEnabled: e.target.checked }))} />{' '}
                 {t('smartAlerts.push.label')}
@@ -207,6 +221,10 @@ export function AlertBuilderModal({ initial, presetId, presetName, onClose, onSa
               <div className="sa-review-line">
                 <span>{t('smartAlerts.review.cooldown')}</span>
                 <span>{t(`smartAlerts.cooldown.min${draft.cooldownMs / 60_000}`)}</span>
+              </div>
+              <div className="sa-review-line">
+                <span>{t('smartAlerts.confirmation.label')}</span>
+                <span>{t(`smartAlerts.confirmation.cycles${draft.confirmationCycles}`)}</span>
               </div>
               <div className="sa-review-line">
                 <span>{t('smartAlerts.review.push')}</span>

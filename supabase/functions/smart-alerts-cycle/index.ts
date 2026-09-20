@@ -31,6 +31,7 @@ interface SmartAlertRow {
   id: string; name: string; category: string; symbol: string; mode: string; session_duration: string | null;
   enabled: boolean; conditions: AlertCondition[]; operator: "AND" | "OR"; cooldown_ms: number; push_enabled: boolean;
   created_at: string; expires_at: string | null; last_triggered_at: string | null; session_expired: boolean;
+  confirmation_cycles: number; pending_match_count: number; last_invalidated_at: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -198,11 +199,15 @@ const CATEGORY_MESSAGES: Record<string, string> = {
   MARKET_STRENGTH: "Market strength conditions detected", CUSTOM: "Custom alert triggered",
 };
 
-// Keep in sync with directionLabel()/PUSH_DISCLAIMER in src/lib/smartAlerts/notificationCopy.ts
+// Direction hint is a *bias*, never an imperative buy/sell instruction — "COMPRA"/"VENDI" were
+// tried and reverted (the underlying signals have weak, time-decaying predictive power, so an
+// imperative label overstates the confidence the data supports). Keep in sync with
+// directionLabel()/PUSH_DISCLAIMER in src/lib/smartAlerts/notificationCopy.ts.
 const DIRECTION_LABELS: Record<string, string> = {
-  REVERSAL_WATCH: "🟢 COMPRA", MARKET_STRENGTH: "🟢 COMPRA/TIENI", OVERHEATED_MARKET: "🔴 VENDI",
+  REVERSAL_WATCH: "🟢 Bias rialzista", MARKET_STRENGTH: "🟢 Bias rialzista", OVERHEATED_MARKET: "🔴 Bias ribassista",
 };
-const PUSH_DISCLAIMER = "Non è un consiglio finanziario";
+const PUSH_DISCLAIMER = "Segnale informativo, non un consiglio finanziario né un ordine operativo";
+const INVALIDATION_PREFIX = "↩️ Non più valido";
 
 function buildPushBody(snapshot: MetricSnapshot, categoryMessage: string): string {
   const lines: string[] = [categoryMessage];
@@ -215,7 +220,7 @@ function buildPushBody(snapshot: MetricSnapshot, categoryMessage: string): strin
   return lines.join("\n");
 }
 
-async function sendSmartAlertPush(sb: ReturnType<typeof createClient>, row: SmartAlertRow, snapshot: MetricSnapshot) {
+async function sendPush(sb: ReturnType<typeof createClient>, row: SmartAlertRow, title: string, body: string) {
   if (!row.push_enabled) return { sent: 0, reason: "push_disabled_for_alert" };
   const vapidPublic = Deno.env.get("VAPID_PUBLIC_KEY");
   const vapidPrivate = Deno.env.get("VAPID_PRIVATE_KEY");
@@ -226,8 +231,6 @@ async function sendSmartAlertPush(sb: ReturnType<typeof createClient>, row: Smar
   const { data: subs } = await sb.from("push_subscriptions").select("*").eq("smart_alerts_enabled", true);
   if (!subs || subs.length === 0) return { sent: 0, reason: "no_subscribers" };
 
-  const title = `${DIRECTION_LABELS[row.category] ?? "⚪ NEUTRO"} · ${row.symbol}/USDT — ${row.name}`;
-  const body = buildPushBody(snapshot, CATEGORY_MESSAGES[row.category] ?? "Alert conditions detected");
   const payload = JSON.stringify({ title, body, type: "SMART_ALERT", symbol: row.symbol, alertId: row.id, category: row.category });
 
   let sent = 0;
@@ -242,6 +245,20 @@ async function sendSmartAlertPush(sb: ReturnType<typeof createClient>, row: Smar
     }
   }));
   return { sent, total: subs.length };
+}
+
+function sendTriggeredPush(sb: ReturnType<typeof createClient>, row: SmartAlertRow, snapshot: MetricSnapshot) {
+  const title = `${DIRECTION_LABELS[row.category] ?? "⚪ Neutro"} · ${row.symbol}/USDT — ${row.name}`;
+  const body = buildPushBody(snapshot, CATEGORY_MESSAGES[row.category] ?? "Alert conditions detected");
+  return sendPush(sb, row, title, body);
+}
+
+// No direction hint here: the setup that prompted the original bias is gone, so implying a
+// direction again would be misleading.
+function sendInvalidationPush(sb: ReturnType<typeof createClient>, row: SmartAlertRow, snapshot: MetricSnapshot) {
+  const title = `${INVALIDATION_PREFIX} · ${row.symbol}/USDT — ${row.name}`;
+  const body = buildPushBody(snapshot, "Le condizioni che avevano fatto scattare questo alert non sono più valide.");
+  return sendPush(sb, row, title, body);
 }
 
 // ---------------------------------------------------------------------------
@@ -275,21 +292,43 @@ Deno.serve(async () => {
 
       const inCooldown = row.last_triggered_at ? now - new Date(row.last_triggered_at).getTime() < row.cooldown_ms : false;
       const { triggered, matched } = evaluateAlert(row, snapshot);
-      const shouldFire = triggered && !inCooldown;
 
-      if (!shouldFire) {
-        results[row.id] = { triggered, inCooldown, fired: false };
-        continue;
+      // Confirmation: require `confirmation_cycles` consecutive matching runs before firing —
+      // absorbs a single noisy/stale data point instead of firing on it directly (ported from
+      // src/lib/smartAlerts/conditionEngine.ts's processAlert).
+      const prevPending = row.pending_match_count ?? 0;
+      const nextPending = triggered ? prevPending + 1 : 0;
+      const requiredCycles = Math.max(1, row.confirmation_cycles ?? 1);
+      const confirmed = nextPending >= requiredCycles;
+      const shouldFire = confirmed && !inCooldown;
+
+      const invalidationInCooldown = row.last_invalidated_at ? now - new Date(row.last_invalidated_at).getTime() < row.cooldown_ms : false;
+      const shouldInvalidate = !triggered && prevPending > 0 && Boolean(row.last_triggered_at) && !invalidationInCooldown;
+
+      // Persist the confirmation counter (and, when relevant, the trigger/invalidation timestamp)
+      // in a single write per row per cycle.
+      const alertPatch: Record<string, unknown> = { pending_match_count: nextPending, updated_at: nowIso };
+      if (shouldFire) alertPatch.last_triggered_at = nowIso;
+      if (shouldInvalidate) alertPatch.last_invalidated_at = nowIso;
+      await sb.from("smart_alerts").update(alertPatch).eq("id", row.id);
+
+      if (shouldFire) {
+        await sb.from("smart_alert_events").insert({
+          alert_id: row.id, alert_name: row.name, category: row.category, symbol: row.symbol, kind: "triggered",
+          matched_conditions: matched, snapshot, created_at: nowIso, read: false,
+        });
+        const pushResult = await sendTriggeredPush(sb, row, snapshot);
+        results[row.id] = { triggered: true, fired: true, push: pushResult };
+      } else if (shouldInvalidate) {
+        await sb.from("smart_alert_events").insert({
+          alert_id: row.id, alert_name: row.name, category: row.category, symbol: row.symbol, kind: "invalidated",
+          matched_conditions: matched, snapshot, created_at: nowIso, read: false,
+        });
+        const pushResult = await sendInvalidationPush(sb, row, snapshot);
+        results[row.id] = { triggered: false, invalidated: true, push: pushResult };
+      } else {
+        results[row.id] = { triggered, inCooldown, fired: false, pendingMatchCount: nextPending };
       }
-
-      await sb.from("smart_alert_events").insert({
-        alert_id: row.id, alert_name: row.name, category: row.category, symbol: row.symbol,
-        matched_conditions: matched, snapshot, created_at: nowIso, read: false,
-      });
-      await sb.from("smart_alerts").update({ last_triggered_at: nowIso, updated_at: nowIso }).eq("id", row.id);
-
-      const pushResult = await sendSmartAlertPush(sb, row, snapshot);
-      results[row.id] = { triggered: true, fired: true, push: pushResult };
     }
 
     return new Response(JSON.stringify({ ok: true, evaluated: alerts.length, results }), { headers: { "Content-Type": "application/json" }, status: 200 });

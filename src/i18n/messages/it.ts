@@ -610,6 +610,14 @@ export const it: MessageTree = {
       min60: '1 ora',
       min240: '4 ore',
     },
+    confirmation: {
+      label: 'Conferma',
+      hint: 'Richiede che le condizioni restino valide per questo numero di controlli consecutivi prima di far scattare l\'alert — assorbe una lettura isolata e rumorosa invece di agire subito su di essa.',
+      cycles1: 'Immediata (1 controllo)',
+      cycles2: '2 controlli consecutivi',
+      cycles3: '3 controlli consecutivi',
+      progress: 'In conferma ({{count}}/{{required}})',
+    },
     push: { label: 'Notifiche push', testBtn: 'Test alert' },
     name: { label: "Nome dell'alert", placeholder: 'es. BTC Reversal Watch' },
     review: {
@@ -628,7 +636,7 @@ export const it: MessageTree = {
       editableHint: 'Tutte le soglie restano completamente modificabili dopo aver scelto un preset.',
       reversal_watch: {
         name: 'Reversal Watch',
-        description: "Il prezzo si indebolisce mentre l'Open Interest continua a salire — possibile cambio di posizionamento.",
+        description: "Il prezzo si indebolisce mentre l'Open Interest continua a salire e il funding è già negativo — gli short si accumulano in un mercato già sbilanciato al ribasso, uno schema classico prima di un possibile squeeze/inversione.",
       },
       overheated_market: {
         name: 'Mercato surriscaldato',
@@ -668,8 +676,9 @@ export const it: MessageTree = {
       viewDetails: 'Vedi dettagli',
       hideDetails: 'Nascondi dettagli',
       triggered: '{{name}} scattato',
+      invalidated: '{{name}} — condizioni non più valide',
       time: 'Ora',
     },
-    builder: { newTitle: 'Crea Smart Alert', editTitle: 'Modifica Smart Alert', addAlert: 'Aggiungi alert', addAlertHint: 'Inserisci un nome e aggiungi almeno una condizione.', quickStartBtn: 'Aggiungi i 3 alert essenziali', quickStartHint: 'Reversal Watch (compra), Strong Momentum (tieni/entra), Overheated Market (vendi). Già configurati, li puoi modificare quando vuoi.', quickStartDone: 'Già aggiunti', saveError: 'Impossibile salvare l\'alert. Riprova.' },
+    builder: { newTitle: 'Crea Smart Alert', editTitle: 'Modifica Smart Alert', addAlert: 'Aggiungi alert', addAlertHint: 'Inserisci un nome e aggiungi almeno una condizione.', quickStartBtn: 'Aggiungi i 3 alert essenziali', quickStartHint: 'Reversal Watch (bias rialzista), Strong Momentum (bias rialzista), Overheated Market (bias ribassista) — solo informativo, non un\'istruzione di acquisto/vendita. Già configurati, li puoi modificare quando vuoi.', quickStartDone: 'Già aggiunti', saveError: 'Impossibile salvare l\'alert. Riprova.' },
   },
 }

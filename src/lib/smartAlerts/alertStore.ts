@@ -6,6 +6,7 @@ import type { SmartAlert, TriggeredAlertEvent } from '../../types/smartAlert'
 
 const ALERTS_KEY = 'csp_smart_alerts_v1'
 const HISTORY_KEY = 'csp_smart_alert_history_v1'
+const SYNCED_KEY = 'csp_smart_alerts_synced_v1'
 const MAX_HISTORY = 200
 
 function readJson<T>(key: string, fallback: T): T {
@@ -43,6 +44,24 @@ export function upsertLocalAlert(alert: SmartAlert): SmartAlert[] {
   const next = idx === -1 ? [alert, ...existing] : existing.map((a, i) => (i === idx ? alert : a))
   saveLocalAlerts(next)
   return next
+}
+
+/** Ids the server has confirmed holding (fetched from it, or an upsert it acknowledged). Lets the
+ * sync tell "deleted elsewhere" (was synced, now gone) from "never made it to the server". */
+export function listSyncedIds(): Set<string> {
+  return new Set(readJson<string[]>(SYNCED_KEY, []))
+}
+
+export function markSynced(ids: string[]): void {
+  if (ids.length === 0) return
+  const next = listSyncedIds()
+  for (const id of ids) next.add(id)
+  writeJson(SYNCED_KEY, Array.from(next))
+}
+
+export function unmarkSynced(id: string): void {
+  const next = listSyncedIds()
+  if (next.delete(id)) writeJson(SYNCED_KEY, Array.from(next))
 }
 
 export function deleteLocalAlert(id: string): SmartAlert[] {

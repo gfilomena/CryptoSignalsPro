@@ -15,14 +15,14 @@ import { METRIC_TIMEFRAMES } from '../../types/smartAlert'
 import { calculateRSI } from '../indicators'
 import type { Candle } from '../../types/scalpSignal'
 
-const FAPI_BASE = 'https://fapi.binance.com'
+export const FAPI_BASE = 'https://fapi.binance.com'
 
 export function toFuturesPair(symbol: string): string {
   const s = symbol.toUpperCase()
   return s.endsWith('USDT') ? s : `${s}USDT`
 }
 
-async function getJson<T>(url: string): Promise<T> {
+export async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Binance futures ${res.status} for ${url}`)
   return (await res.json()) as T

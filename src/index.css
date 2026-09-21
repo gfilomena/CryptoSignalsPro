@@ -1996,3 +1996,37 @@
             .sa-create-btn, .sa-secondary-btn { flex: 1; }
             .sa-cards-grid { grid-template-columns: 1fr; }
         }
+
+        /* ===== Market Setup Analyzer ===== */
+        .msa { margin-top: 24px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 18px; }
+        .msa-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+        .msa-title { font-size: 1.25rem; font-weight: 700; }
+        .msa-sub { font-size: 0.85rem; opacity: 0.75; margin-top: 4px; max-width: 560px; }
+        .msa-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .msa-window { display: flex; flex-direction: column; font-size: 0.72rem; gap: 3px; opacity: 0.9; }
+        .msa-window select { background: rgba(0,0,0,0.3); color: inherit; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 8px; }
+        .msa-disclaimer, .msa-note { font-size: 0.78rem; opacity: 0.75; margin: 8px 0; line-height: 1.45; }
+        .msa-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; padding: 10px 12px; font-size: 0.85rem; margin: 10px 0; }
+        .msa-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 12px 0; }
+        .msa-card { background: rgba(0,0,0,0.25); border-radius: 10px; padding: 12px; }
+        .msa-card-k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.65; }
+        .msa-card-v { font-size: 1.15rem; font-weight: 700; margin-top: 4px; }
+        .msa-card-s { font-size: 0.72rem; opacity: 0.7; margin-top: 4px; line-height: 1.35; }
+        .msa-badge.BULLISH { color: #22c55e; } .msa-badge.BEARISH { color: #ef4444; } .msa-badge.NEUTRAL { color: #eab308; } .msa-badge.INSUFFICIENT { color: #94a3b8; }
+        .msa-align.ALIGNED { color: #22c55e; } .msa-align.CONFLICTING { color: #f97316; } .msa-align.NOT_COMPARABLE { color: #94a3b8; }
+        .msa-interp { font-weight: 600; margin: 8px 0; }
+        .msa-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; opacity: 0.9; margin-bottom: 8px; }
+        .msa-sample.INSUFFICIENT, .msa-rob.LOW { color: #f97316; font-weight: 700; } .msa-sample.LOW { color: #eab308; } .msa-sample.MODERATE { color: #a3e635; } .msa-sample.STRONG { color: #22c55e; }
+        .msa-statement { font-size: 0.9rem; line-height: 1.5; margin: 6px 0; }
+        .msa-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 8px 0; }
+        .msa-table th, .msa-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.07); vertical-align: top; }
+        .msa-table th { font-size: 0.7rem; text-transform: uppercase; opacity: 0.65; }
+        .msa-table small { opacity: 0.65; }
+        .msa-table tr.msa-oos td { background: rgba(34,197,94,0.07); font-weight: 600; }
+        .msa-match.HIGH { color: #22c55e; } .msa-match.MODERATE { color: #eab308; } .msa-match.LOW { color: #94a3b8; }
+        .msa-details { margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 8px; }
+        .msa-details > summary { cursor: pointer; font-weight: 600; font-size: 0.88rem; padding: 4px 0; }
+        .msa-limits { font-size: 0.8rem; line-height: 1.5; padding-left: 18px; opacity: 0.85; }
+        .msa-hist-row { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.78rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .msa-counts { font-size: 0.8rem; margin: 6px 0; }
+        @media (max-width: 640px) { .msa { padding: 12px; } .msa-table { display: block; overflow-x: auto; } }

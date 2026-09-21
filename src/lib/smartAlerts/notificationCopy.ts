@@ -46,17 +46,11 @@ export function buildMetricLines(snapshot: MetricSnapshot): string[] {
  * imperative buy/sell label overstates the confidence the data actually supports. Push copy is
  * generated server-side with no per-user language, so labels are fixed (Italian) — keep in sync
  * with supabase/functions/smart-alerts-cycle. */
-export function directionLabel(category: AlertCategory): string {
-  switch (category) {
-    case 'REVERSAL_WATCH':
-      return '🟢 Bias rialzista'
-    case 'MARKET_STRENGTH':
-      return '🟢 Bias rialzista'
-    case 'OVERHEATED_MARKET':
-      return '🔴 Bias ribassista'
-    default:
-      return '⚪ Neutro'
-  }
+export function directionLabel(_category: AlertCategory): string {
+  // The former "🟢 Bias rialzista" / "🔴 Bias ribassista" labels were removed after the 36-month replay
+  // (docs/audit): none of the presets moved the forward return in the claimed direction at any horizon
+  // tested, so the title no longer implies a direction.
+  return '⚪ Condizioni rilevate'
 }
 
 export const PUSH_DISCLAIMER = 'Segnale informativo, non un consiglio finanziario né un ordine operativo'

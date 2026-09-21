@@ -39,7 +39,7 @@ Deno.serve(async (req: Request) => {
     const payload = JSON.stringify(
       body.kind === "smart_alert"
         ? {
-            title: "🟢 Bias rialzista · BTC/USDT — Reversal Watch (TEST)",
+            title: "⚪ Condizioni rilevate · BTC/USDT — Reversal Watch (TEST)",
             body: "Esempio di alert reale: così apparirà quando scatta.\nPrice change: -0.62%\nOI 15m: +1.43%\nSegnale informativo, non un consiglio finanziario né un ordine operativo",
             type: "TEST",
           }

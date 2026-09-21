@@ -204,7 +204,6 @@ const CATEGORY_MESSAGES: Record<string, string> = {
 // imperative label overstates the confidence the data supports). Keep in sync with
 // directionLabel()/PUSH_DISCLAIMER in src/lib/smartAlerts/notificationCopy.ts.
 const DIRECTION_LABELS: Record<string, string> = {
-  REVERSAL_WATCH: "🟢 Bias rialzista", MARKET_STRENGTH: "🟢 Bias rialzista", OVERHEATED_MARKET: "🔴 Bias ribassista",
 };
 const PUSH_DISCLAIMER = "Segnale informativo, non un consiglio finanziario né un ordine operativo";
 const INVALIDATION_PREFIX = "↩️ Non più valido";
@@ -248,7 +247,7 @@ async function sendPush(sb: ReturnType<typeof createClient>, row: SmartAlertRow,
 }
 
 function sendTriggeredPush(sb: ReturnType<typeof createClient>, row: SmartAlertRow, snapshot: MetricSnapshot) {
-  const title = `${DIRECTION_LABELS[row.category] ?? "⚪ Neutro"} · ${row.symbol}/USDT — ${row.name}`;
+  const title = `${DIRECTION_LABELS[row.category] ?? "⚪ Condizioni rilevate"} · ${row.symbol}/USDT — ${row.name}`;
   const body = buildPushBody(snapshot, CATEGORY_MESSAGES[row.category] ?? "Alert conditions detected");
   return sendPush(sb, row, title, body);
 }

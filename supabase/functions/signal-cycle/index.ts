@@ -613,6 +613,8 @@ async function sendPushToSubscribers(
   if (alert.stopLoss) bodyParts.push(`SL ${alert.stopLoss.toFixed(2)}`);
   if (alert.takeProfit1) bodyParts.push(`TP1 ${alert.takeProfit1.toFixed(2)}`);
   if (alert.confidence) bodyParts.push(`Quality ${alert.confidence}%`);
+  // Audit (docs/audit): no demonstrated edge on this signal — paper trading only.
+  if (alert.type === "ENTRY_CONFIRMED") bodyParts.push("Paper trading · nessun edge dimostrato");
   const payload = JSON.stringify({ title, body: bodyParts.join(" · "), type: alert.type, symbol: alert.symbol });
 
   let sent = 0;

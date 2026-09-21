@@ -1,5 +1,5 @@
-# Smart Alerts replay — scripts/audit/runSmartAudit.ts (OOS WITHHELD)
-Snapshot series built: 315360 five-minute steps in 365 ms; first 2023-09-02T00:05:00.000Z last 2026-09-01T00:00:00.000Z
+# Smart Alerts replay — scripts/audit/runSmartAudit.ts (OOS INCLUDED)
+Snapshot series built: 315360 five-minute steps in 364 ms; first 2023-09-02T00:05:00.000Z last 2026-09-01T00:00:00.000Z
 Unavailable-data share per metric: OI 15m 0.24%, OI 1h 0.27%, volume15m 0.01%
 
 ## reversal_watch  (hypothesis: bullish bias)
@@ -38,17 +38,28 @@ fired 38 (0.035/day) | invalidation pushes 38, of which for a streak that NEVER 
 | 12h | 22 | 18 | 0.544% | 0.292% | 0.424% | 0.424% | [-0.595%, 1.563%] | 50.0% | 0.085% | 0.339% | [-0.680%, 1.478%] | 1.911% | -1.650% |
 | 24h | 22 | 15 | 0.176% | 0.083% | 0.056% | 0.056% | [-0.981%, 1.203%] | 45.5% | 0.169% | -0.113% | [-1.150%, 1.034%] | 2.059% | -2.302% |
 
-### reversal_watch — first passage (train+val)
+### reversal_watch — oos
+| horizon | n | n_indep | mean gross | median gross | mean net | mean net (delayed) | 95% CI net | %>0 net | baseline | excess net | 95% CI excess | MFE | MAE |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 5m | 16 | 16 | 0.091% | -0.067% | -0.029% | -0.029% | [-0.205%, 0.169%] | 43.8% | -0.000% | -0.029% | [-0.205%, 0.169%] | 0.325% | -0.254% |
+| 15m | 16 | 16 | 0.018% | 0.129% | -0.102% | -0.102% | [-0.321%, 0.101%] | 50.0% | -0.000% | -0.102% | [-0.320%, 0.101%] | 0.475% | -0.352% |
+| 30m | 16 | 16 | 0.116% | 0.235% | -0.004% | -0.004% | [-0.341%, 0.329%] | 62.5% | -0.001% | -0.003% | [-0.341%, 0.330%] | 0.687% | -0.521% |
+| 1h | 16 | 14 | 0.015% | 0.291% | -0.105% | -0.105% | [-0.704%, 0.333%] | 68.8% | -0.001% | -0.104% | [-0.703%, 0.334%] | 0.801% | -0.754% |
+| 4h | 16 | 12 | -0.159% | -0.071% | -0.279% | -0.279% | [-0.609%, 0.034%] | 43.8% | -0.005% | -0.274% | [-0.604%, 0.039%] | 1.122% | -1.683% |
+| 12h | 16 | 12 | 0.045% | 0.284% | -0.075% | -0.075% | [-0.811%, 0.671%] | 68.8% | -0.015% | -0.059% | [-0.796%, 0.687%] | 1.562% | -2.211% |
+| 24h | 16 | 10 | 0.144% | -0.315% | 0.024% | 0.024% | [-1.521%, 1.951%] | 43.8% | -0.029% | 0.053% | [-1.492%, 1.980%] | 2.426% | -3.119% |
+
+### reversal_watch — first passage (oos)
 | horizon | X | n | P(target first) | P(adverse first) | P(neither) |
 |---|---|---|---|---|---|
-| 4h | 0.25% | 22 | 50.0% | 50.0% | 0.0% |
-| 4h | 0.50% | 22 | 50.0% | 50.0% | 0.0% |
-| 4h | 1.00% | 22 | 36.4% | 31.8% | 31.8% |
-| 4h | 2.00% | 22 | 22.7% | 22.7% | 54.5% |
-| 24h | 0.25% | 22 | 50.0% | 50.0% | 0.0% |
-| 24h | 0.50% | 22 | 50.0% | 50.0% | 0.0% |
-| 24h | 1.00% | 22 | 45.5% | 45.5% | 9.1% |
-| 24h | 2.00% | 22 | 36.4% | 36.4% | 27.3% |
+| 4h | 0.25% | 16 | 37.5% | 62.5% | 0.0% |
+| 4h | 0.50% | 16 | 68.8% | 31.3% | 0.0% |
+| 4h | 1.00% | 16 | 37.5% | 50.0% | 12.5% |
+| 4h | 2.00% | 16 | 6.3% | 25.0% | 68.8% |
+| 24h | 0.25% | 16 | 37.5% | 62.5% | 0.0% |
+| 24h | 0.50% | 16 | 68.8% | 31.3% | 0.0% |
+| 24h | 1.00% | 16 | 43.8% | 56.3% | 0.0% |
+| 24h | 2.00% | 16 | 18.8% | 62.5% | 18.8% |
 
 ## strong_momentum  (hypothesis: bullish bias)
 fired 215 (0.196/day) | invalidation pushes 214, of which for a streak that NEVER notified the user: 0
@@ -86,17 +97,28 @@ fired 215 (0.196/day) | invalidation pushes 214, of which for a streak that NEVE
 | 12h | 174 | 145 | 0.078% | -0.035% | -0.042% | -0.042% | [-0.383%, 0.299%] | 45.4% | 0.085% | -0.127% | [-0.468%, 0.214%] | 1.733% | -1.558% |
 | 24h | 174 | 129 | 0.013% | -0.038% | -0.107% | -0.107% | [-0.552%, 0.331%] | 46.6% | 0.169% | -0.276% | [-0.721%, 0.162%] | 2.310% | -2.206% |
 
-### strong_momentum — first passage (train+val)
+### strong_momentum — oos
+| horizon | n | n_indep | mean gross | median gross | mean net | mean net (delayed) | 95% CI net | %>0 net | baseline | excess net | 95% CI excess | MFE | MAE |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 5m | 41 | 41 | 0.004% | -0.001% | -0.116% | -0.116% | [-0.181%, -0.047%] | 22.0% | -0.000% | -0.116% | [-0.181%, -0.047%] | 0.167% | -0.163% |
+| 15m | 41 | 41 | -0.079% | -0.046% | -0.199% | -0.199% | [-0.345%, -0.063%] | 31.7% | -0.000% | -0.199% | [-0.344%, -0.062%] | 0.281% | -0.338% |
+| 30m | 41 | 41 | -0.039% | -0.001% | -0.159% | -0.159% | [-0.393%, 0.120%] | 34.1% | -0.001% | -0.158% | [-0.393%, 0.120%] | 0.499% | -0.476% |
+| 1h | 41 | 37 | 0.204% | 0.153% | 0.084% | 0.084% | [-0.199%, 0.410%] | 56.1% | -0.001% | 0.085% | [-0.198%, 0.411%] | 0.742% | -0.542% |
+| 4h | 41 | 33 | 0.115% | -0.099% | -0.005% | -0.005% | [-0.480%, 0.502%] | 41.5% | -0.005% | 0.000% | [-0.475%, 0.507%] | 1.341% | -0.943% |
+| 12h | 41 | 30 | 0.401% | -0.035% | 0.281% | 0.281% | [-0.376%, 1.026%] | 46.3% | -0.015% | 0.296% | [-0.361%, 1.041%] | 1.814% | -1.288% |
+| 24h | 41 | 25 | 0.599% | 0.382% | 0.479% | 0.479% | [-0.414%, 1.512%] | 56.1% | -0.029% | 0.508% | [-0.385%, 1.541%] | 2.502% | -1.655% |
+
+### strong_momentum — first passage (oos)
 | horizon | X | n | P(target first) | P(adverse first) | P(neither) |
 |---|---|---|---|---|---|
-| 4h | 0.25% | 174 | 46.6% | 53.4% | 0.0% |
-| 4h | 0.50% | 174 | 53.4% | 42.0% | 4.6% |
-| 4h | 1.00% | 174 | 35.1% | 29.9% | 35.1% |
-| 4h | 2.00% | 174 | 12.6% | 9.8% | 77.6% |
-| 24h | 0.25% | 174 | 46.6% | 53.4% | 0.0% |
-| 24h | 0.50% | 174 | 55.2% | 44.8% | 0.0% |
-| 24h | 1.00% | 174 | 52.3% | 44.3% | 3.4% |
-| 24h | 2.00% | 174 | 40.2% | 33.9% | 25.9% |
+| 4h | 0.25% | 41 | 51.2% | 48.8% | 0.0% |
+| 4h | 0.50% | 41 | 56.1% | 43.9% | 0.0% |
+| 4h | 1.00% | 41 | 39.0% | 26.8% | 34.1% |
+| 4h | 2.00% | 41 | 9.8% | 14.6% | 75.6% |
+| 24h | 0.25% | 41 | 51.2% | 48.8% | 0.0% |
+| 24h | 0.50% | 41 | 56.1% | 43.9% | 0.0% |
+| 24h | 1.00% | 41 | 51.2% | 43.9% | 4.9% |
+| 24h | 2.00% | 41 | 43.9% | 31.7% | 24.4% |
 
 ## overheated_market  (hypothesis: bearish bias)
 fired 30 (0.027/day) | invalidation pushes 29, of which for a streak that NEVER notified the user: 0
@@ -134,17 +156,28 @@ fired 30 (0.027/day) | invalidation pushes 29, of which for a streak that NEVER 
 | 12h | 30 | 24 | -0.024% | 0.094% | -0.144% | -0.144% | [-0.765%, 0.476%] | 43.3% | -0.085% | -0.060% | [-0.680%, 0.560%] | 1.592% | -1.469% |
 | 24h | 30 | 24 | 0.109% | -0.583% | -0.011% | -0.011% | [-0.719%, 0.736%] | 43.3% | -0.169% | 0.158% | [-0.550%, 0.905%] | 2.112% | -1.798% |
 
-### overheated_market — first passage (train+val)
+### overheated_market — oos
+| horizon | n | n_indep | mean gross | median gross | mean net | mean net (delayed) | 95% CI net | %>0 net | baseline | excess net | 95% CI excess | MFE | MAE |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 5m | 0 | 0 | n/a | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a |
+| 15m | 0 | 0 | n/a | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a |
+| 30m | 0 | 0 | n/a | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a |
+| 1h | 0 | 0 | n/a | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a |
+| 4h | 0 | 0 | n/a | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a |
+| 12h | 0 | 0 | n/a | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a |
+| 24h | 0 | 0 | n/a | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a | n/a | [n/a, n/a] | n/a | n/a |
+
+### overheated_market — first passage (oos)
 | horizon | X | n | P(target first) | P(adverse first) | P(neither) |
 |---|---|---|---|---|---|
-| 4h | 0.25% | 30 | 43.3% | 56.7% | 0.0% |
-| 4h | 0.50% | 30 | 33.3% | 60.0% | 6.7% |
-| 4h | 1.00% | 30 | 16.7% | 36.7% | 46.7% |
-| 4h | 2.00% | 30 | 10.0% | 13.3% | 76.7% |
-| 24h | 0.25% | 30 | 43.3% | 56.7% | 0.0% |
-| 24h | 0.50% | 30 | 40.0% | 60.0% | 0.0% |
-| 24h | 1.00% | 30 | 43.3% | 56.7% | 0.0% |
-| 24h | 2.00% | 30 | 36.7% | 33.3% | 30.0% |
+| 4h | 0.25% | 0 | n/a | n/a | n/a |
+| 4h | 0.50% | 0 | n/a | n/a | n/a |
+| 4h | 1.00% | 0 | n/a | n/a | n/a |
+| 4h | 2.00% | 0 | n/a | n/a | n/a |
+| 24h | 0.25% | 0 | n/a | n/a | n/a |
+| 24h | 0.50% | 0 | n/a | n/a | n/a |
+| 24h | 1.00% | 0 | n/a | n/a | n/a |
+| 24h | 2.00% | 0 | n/a | n/a | n/a |
 
 ## long_squeeze_watch: fired 0 times over 315360 steps (requires liquidation metrics, which marketData.ts always reports as null)
 
@@ -153,99 +186,99 @@ fired 30 (0.027/day) | invalidation pushes 29, of which for a streak that NEVER 
 ## Condition ablation (train+val; confirmation=1; excess net vs baseline at 1h / 4h; is each extra condition adding information?)
 | preset | conditions kept | n fired | n_indep(4h) | 1h mean gross | 1h excess net | 4h mean gross | 4h excess net | 4h 95% CI excess |
 |---|---|---|---|---|---|---|---|---|
-| reversal_watch | PRICE_CHANGE<=-0.5 | 30283 | 2418 | 0.014% | -0.113% | 0.051% | -0.098% | [-0.110%, -0.086%] |
-| reversal_watch | OPEN_INTEREST_CHANGE.15m>=1 | 462 | 361 | 0.008% | -0.119% | 0.024% | -0.124% | [-0.249%, 0.003%] |
-| reversal_watch | PRICE_CHANGE<=-0.5 AND OPEN_INTEREST_CHANGE.15m>=1 | 162 | 137 | 0.018% | -0.109% | -0.114% | -0.263% | [-0.495%, -0.021%] |
-| reversal_watch | FUNDING_RATE<=0 | 9239 | 599 | 0.008% | -0.119% | 0.058% | -0.091% | [-0.111%, -0.069%] |
-| reversal_watch | PRICE_CHANGE<=-0.5 AND FUNDING_RATE<=0 | 2808 | 253 | 0.013% | -0.114% | 0.111% | -0.037% | [-0.076%, 0.001%] |
-| reversal_watch | OPEN_INTEREST_CHANGE.15m>=1 AND FUNDING_RATE<=0 | 63 | 46 | 0.065% | -0.062% | 0.284% | 0.135% | [-0.185%, 0.440%] |
-| reversal_watch | PRICE_CHANGE<=-0.5 AND OPEN_INTEREST_CHANGE.15m>=1 AND FUNDING_RATE<=0 | 22 | 19 | -0.028% | -0.155% | 0.078% | -0.071% | [-0.665%, 0.607%] |
-| strong_momentum | PRICE_CHANGE>=0.5 | 18026 | 2734 | 0.004% | -0.123% | 0.020% | -0.129% | [-0.143%, -0.115%] |
-| strong_momentum | VOLUME_CHANGE.15m>=20 | 23046 | 4739 | 0.006% | -0.121% | 0.028% | -0.120% | [-0.132%, -0.107%] |
-| strong_momentum | PRICE_CHANGE>=0.5 AND VOLUME_CHANGE.15m>=20 | 9846 | 2406 | 0.004% | -0.123% | 0.025% | -0.123% | [-0.144%, -0.104%] |
-| strong_momentum | OPEN_INTEREST_CHANGE.15m>=1 | 428 | 361 | 0.018% | -0.109% | 0.028% | -0.120% | [-0.240%, 0.014%] |
-| strong_momentum | PRICE_CHANGE>=0.5 AND OPEN_INTEREST_CHANGE.15m>=1 | 238 | 194 | 0.031% | -0.096% | 0.119% | -0.029% | [-0.196%, 0.135%] |
-| strong_momentum | VOLUME_CHANGE.15m>=20 AND OPEN_INTEREST_CHANGE.15m>=1 | 318 | 284 | -0.035% | -0.162% | -0.002% | -0.150% | [-0.296%, 0.005%] |
-| strong_momentum | PRICE_CHANGE>=0.5 AND VOLUME_CHANGE.15m>=20 AND OPEN_INTEREST_CHANGE.15m>=1 | 174 | 154 | -0.010% | -0.138% | 0.114% | -0.034% | [-0.240%, 0.176%] |
-| overheated_market | RSI.1h>=80 | 1955 | 431 | 0.010% | -0.103% | -0.005% | -0.096% | [-0.141%, -0.050%] |
-| overheated_market | OPEN_INTEREST_CHANGE.15m>=1 | 428 | 361 | -0.018% | -0.131% | -0.028% | -0.120% | [-0.253%, -0.000%] |
-| overheated_market | RSI.1h>=80 AND OPEN_INTEREST_CHANGE.15m>=1 | 62 | 50 | -0.121% | -0.234% | -0.148% | -0.240% | [-0.550%, 0.086%] |
-| overheated_market | FUNDING_RATE>=0.01 | 17188 | 2166 | -0.006% | -0.119% | -0.027% | -0.119% | [-0.135%, -0.104%] |
-| overheated_market | RSI.1h>=80 AND FUNDING_RATE>=0.01 | 886 | 200 | 0.015% | -0.098% | 0.028% | -0.064% | [-0.136%, 0.011%] |
-| overheated_market | OPEN_INTEREST_CHANGE.15m>=1 AND FUNDING_RATE>=0.01 | 189 | 159 | 0.013% | -0.100% | 0.141% | 0.049% | [-0.144%, 0.247%] |
-| overheated_market | RSI.1h>=80 AND OPEN_INTEREST_CHANGE.15m>=1 AND FUNDING_RATE>=0.01 | 30 | 26 | -0.210% | -0.323% | 0.133% | 0.041% | [-0.455%, 0.552%] |
+| reversal_watch | PRICE_CHANGE<=-0.5 | 38571 | 3048 | 0.008% | -0.117% | 0.034% | -0.107% | [-0.118%, -0.096%] |
+| reversal_watch | OPEN_INTEREST_CHANGE.15m>=1 | 576 | 445 | 0.016% | -0.110% | 0.005% | -0.137% | [-0.245%, -0.029%] |
+| reversal_watch | PRICE_CHANGE<=-0.5 AND OPEN_INTEREST_CHANGE.15m>=1 | 209 | 174 | -0.005% | -0.130% | -0.125% | -0.266% | [-0.459%, -0.046%] |
+| reversal_watch | FUNDING_RATE<=0 | 15786 | 1026 | 0.007% | -0.119% | 0.052% | -0.090% | [-0.105%, -0.074%] |
+| reversal_watch | PRICE_CHANGE<=-0.5 AND FUNDING_RATE<=0 | 5753 | 489 | 0.013% | -0.112% | 0.121% | -0.021% | [-0.050%, 0.008%] |
+| reversal_watch | OPEN_INTEREST_CHANGE.15m>=1 AND FUNDING_RATE<=0 | 95 | 72 | 0.051% | -0.074% | 0.142% | 0.000% | [-0.242%, 0.239%] |
+| reversal_watch | PRICE_CHANGE<=-0.5 AND OPEN_INTEREST_CHANGE.15m>=1 AND FUNDING_RATE<=0 | 38 | 31 | -0.010% | -0.135% | -0.022% | -0.164% | [-0.532%, 0.255%] |
+| strong_momentum | PRICE_CHANGE>=0.5 | 22312 | 3379 | 0.005% | -0.120% | 0.019% | -0.123% | [-0.135%, -0.110%] |
+| strong_momentum | VOLUME_CHANGE.15m>=20 | 28956 | 5929 | 0.004% | -0.122% | 0.019% | -0.123% | [-0.135%, -0.112%] |
+| strong_momentum | PRICE_CHANGE>=0.5 AND VOLUME_CHANGE.15m>=20 | 12273 | 2989 | 0.004% | -0.122% | 0.022% | -0.120% | [-0.137%, -0.102%] |
+| strong_momentum | OPEN_INTEREST_CHANGE.15m>=1 | 533 | 445 | 0.026% | -0.099% | 0.014% | -0.127% | [-0.246%, -0.014%] |
+| strong_momentum | PRICE_CHANGE>=0.5 AND OPEN_INTEREST_CHANGE.15m>=1 | 289 | 233 | 0.056% | -0.069% | 0.111% | -0.031% | [-0.178%, 0.124%] |
+| strong_momentum | VOLUME_CHANGE.15m>=20 AND OPEN_INTEREST_CHANGE.15m>=1 | 406 | 357 | -0.022% | -0.147% | 0.006% | -0.136% | [-0.267%, -0.011%] |
+| strong_momentum | PRICE_CHANGE>=0.5 AND VOLUME_CHANGE.15m>=20 AND OPEN_INTEREST_CHANGE.15m>=1 | 215 | 187 | 0.030% | -0.095% | 0.114% | -0.027% | [-0.217%, 0.166%] |
+| overheated_market | RSI.1h>=80 | 2331 | 516 | 0.009% | -0.106% | -0.004% | -0.103% | [-0.145%, -0.063%] |
+| overheated_market | OPEN_INTEREST_CHANGE.15m>=1 | 533 | 445 | -0.026% | -0.141% | -0.014% | -0.113% | [-0.226%, 0.006%] |
+| overheated_market | RSI.1h>=80 AND OPEN_INTEREST_CHANGE.15m>=1 | 75 | 60 | -0.176% | -0.290% | -0.187% | -0.285% | [-0.577%, -0.003%] |
+| overheated_market | FUNDING_RATE>=0.01 | 17896 | 2259 | -0.006% | -0.120% | -0.026% | -0.124% | [-0.140%, -0.109%] |
+| overheated_market | RSI.1h>=80 AND FUNDING_RATE>=0.01 | 917 | 206 | 0.013% | -0.101% | 0.010% | -0.088% | [-0.164%, -0.018%] |
+| overheated_market | OPEN_INTEREST_CHANGE.15m>=1 AND FUNDING_RATE>=0.01 | 190 | 160 | 0.014% | -0.100% | 0.140% | 0.042% | [-0.170%, 0.249%] |
+| overheated_market | RSI.1h>=80 AND OPEN_INTEREST_CHANGE.15m>=1 AND FUNDING_RATE>=0.01 | 30 | 26 | -0.210% | -0.325% | 0.133% | 0.035% | [-0.462%, 0.546%] |
 
 ## Threshold sensitivity (±10%, one condition at a time; train+val; confirmation=1)
 | preset | changed condition | new threshold | n fired | 1h excess net | 4h excess net | 4h mean gross |
 |---|---|---|---|---|---|---|
-| reversal_watch | default | - | 22 | -0.155% | -0.071% | 0.078% |
-| reversal_watch | PRICE_CHANGE x0.9 | -0.45/1/0 | 22 | -0.155% | -0.071% | 0.078% |
-| reversal_watch | PRICE_CHANGE x1.1 | -0.55/1/0 | 21 | -0.175% | -0.128% | 0.020% |
-| reversal_watch | OPEN_INTEREST_CHANGE.15m x0.9 | -0.5/0.9/0 | 27 | -0.133% | -0.056% | 0.092% |
-| reversal_watch | OPEN_INTEREST_CHANGE.15m x1.1 | -0.5/1.1/0 | 20 | -0.112% | -0.110% | 0.038% |
-| strong_momentum | default | - | 174 | -0.138% | -0.034% | 0.114% |
-| strong_momentum | PRICE_CHANGE x0.9 | 0.45/20/1 | 176 | -0.139% | -0.037% | 0.111% |
-| strong_momentum | PRICE_CHANGE x1.1 | 0.55/20/1 | 170 | -0.133% | -0.018% | 0.131% |
-| strong_momentum | VOLUME_CHANGE.15m x0.9 | 0.5/18/1 | 174 | -0.137% | -0.037% | 0.112% |
-| strong_momentum | VOLUME_CHANGE.15m x1.1 | 0.5/22/1 | 174 | -0.138% | -0.034% | 0.114% |
-| strong_momentum | OPEN_INTEREST_CHANGE.15m x0.9 | 0.5/20/0.9 | 241 | -0.162% | -0.055% | 0.093% |
-| strong_momentum | OPEN_INTEREST_CHANGE.15m x1.1 | 0.5/20/1.1 | 144 | -0.137% | -0.041% | 0.108% |
-| overheated_market | default | - | 30 | -0.323% | 0.041% | 0.133% |
-| overheated_market | RSI.1h x0.9 | 72/1/0.01 | 55 | -0.186% | 0.002% | 0.094% |
-| overheated_market | RSI.1h x1.1 | 88/1/0.01 | 8 | -0.210% | 0.128% | 0.220% |
-| overheated_market | OPEN_INTEREST_CHANGE.15m x0.9 | 80/0.9/0.01 | 35 | -0.276% | 0.061% | 0.153% |
-| overheated_market | OPEN_INTEREST_CHANGE.15m x1.1 | 80/1.1/0.01 | 23 | -0.287% | 0.126% | 0.218% |
-| overheated_market | FUNDING_RATE x0.9 | 80/1/0.009000000000000001 | 30 | -0.323% | 0.041% | 0.133% |
-| overheated_market | FUNDING_RATE x1.1 | 80/1/0.011000000000000001 | 5 | -0.612% | 0.196% | 0.288% |
+| reversal_watch | default | - | 38 | -0.135% | -0.164% | -0.022% |
+| reversal_watch | PRICE_CHANGE x0.9 | -0.45/1/0 | 38 | -0.135% | -0.164% | -0.022% |
+| reversal_watch | PRICE_CHANGE x1.1 | -0.55/1/0 | 37 | -0.146% | -0.199% | -0.057% |
+| reversal_watch | OPEN_INTEREST_CHANGE.15m x0.9 | -0.5/0.9/0 | 44 | -0.172% | -0.293% | -0.151% |
+| reversal_watch | OPEN_INTEREST_CHANGE.15m x1.1 | -0.5/1.1/0 | 33 | -0.153% | -0.171% | -0.029% |
+| strong_momentum | default | - | 215 | -0.095% | -0.027% | 0.114% |
+| strong_momentum | PRICE_CHANGE x0.9 | 0.45/20/1 | 218 | -0.097% | -0.032% | 0.110% |
+| strong_momentum | PRICE_CHANGE x1.1 | 0.55/20/1 | 211 | -0.091% | -0.014% | 0.128% |
+| strong_momentum | VOLUME_CHANGE.15m x0.9 | 0.5/18/1 | 215 | -0.095% | -0.029% | 0.112% |
+| strong_momentum | VOLUME_CHANGE.15m x1.1 | 0.5/22/1 | 215 | -0.095% | -0.027% | 0.114% |
+| strong_momentum | OPEN_INTEREST_CHANGE.15m x0.9 | 0.5/20/0.9 | 298 | -0.117% | -0.044% | 0.098% |
+| strong_momentum | OPEN_INTEREST_CHANGE.15m x1.1 | 0.5/20/1.1 | 176 | -0.117% | -0.030% | 0.112% |
+| overheated_market | default | - | 30 | -0.325% | 0.035% | 0.133% |
+| overheated_market | RSI.1h x0.9 | 72/1/0.01 | 55 | -0.188% | -0.004% | 0.094% |
+| overheated_market | RSI.1h x1.1 | 88/1/0.01 | 8 | -0.212% | 0.121% | 0.220% |
+| overheated_market | OPEN_INTEREST_CHANGE.15m x0.9 | 80/0.9/0.01 | 36 | -0.260% | 0.059% | 0.157% |
+| overheated_market | OPEN_INTEREST_CHANGE.15m x1.1 | 80/1.1/0.01 | 23 | -0.289% | 0.120% | 0.218% |
+| overheated_market | FUNDING_RATE x0.9 | 80/1/0.009000000000000001 | 30 | -0.325% | 0.035% | 0.133% |
+| overheated_market | FUNDING_RATE x1.1 | 80/1/0.011000000000000001 | 5 | -0.614% | 0.190% | 0.288% |
 
 ## Confirmation variant: 1 step vs 2 consecutive 5-min steps (train+val)
 | preset | steps | n fired | 4h excess net |
 |---|---|---|---|
-| reversal_watch | 1 | 22 | -0.071% |
-| reversal_watch | 2 | 18 | -0.248% |
-| strong_momentum | 1 | 174 | -0.034% |
-| strong_momentum | 2 | 142 | 0.055% |
-| overheated_market | 1 | 30 | 0.041% |
-| overheated_market | 2 | 25 | -0.071% |
+| reversal_watch | 1 | 38 | -0.164% |
+| reversal_watch | 2 | 33 | -0.361% |
+| strong_momentum | 1 | 215 | -0.027% |
+| strong_momentum | 2 | 176 | 0.047% |
+| overheated_market | 1 | 30 | 0.035% |
+| overheated_market | 2 | 25 | -0.078% |
 
 ## Regime slicing (decision range; 4h excess net; trend regime from 4h EMA+structure, vol terciles fitted on TRAIN only)
 | preset | slice | n fired | 4h mean gross | 4h excess net |
 |---|---|---|---|---|
-| reversal_watch | trend: bullish | 0 | n/a | n/a |
-| reversal_watch | trend: bearish | 9 | -0.398% | -0.546% |
-| reversal_watch | trend: neutral/range | 13 | 0.407% | 0.258% |
-| reversal_watch | vol: low | 1 | 0.824% | 0.675% |
-| reversal_watch | vol: mid | 6 | -0.515% | -0.664% |
-| reversal_watch | vol: high | 15 | 0.265% | 0.117% |
-| strong_momentum | trend: bullish | 54 | 0.032% | -0.116% |
-| strong_momentum | trend: bearish | 15 | 0.486% | 0.338% |
-| strong_momentum | trend: neutral/range | 105 | 0.103% | -0.045% |
-| strong_momentum | vol: low | 51 | 0.092% | -0.056% |
-| strong_momentum | vol: mid | 49 | 0.009% | -0.139% |
-| strong_momentum | vol: high | 74 | 0.199% | 0.051% |
-| overheated_market | trend: bullish | 13 | 0.340% | 0.249% |
-| overheated_market | trend: bearish | 1 | 0.171% | 0.079% |
-| overheated_market | trend: neutral/range | 16 | -0.038% | -0.130% |
-| overheated_market | vol: low | 9 | 0.207% | 0.115% |
-| overheated_market | vol: mid | 5 | 0.028% | -0.064% |
-| overheated_market | vol: high | 16 | 0.124% | 0.033% |
+| reversal_watch | trend: bullish | 1 | 0.441% | 0.300% |
+| reversal_watch | trend: bearish | 19 | -0.283% | -0.425% |
+| reversal_watch | trend: neutral/range | 18 | 0.228% | 0.086% |
+| reversal_watch | vol: low | 1 | 0.824% | 0.682% |
+| reversal_watch | vol: mid | 8 | -0.430% | -0.572% |
+| reversal_watch | vol: high | 29 | 0.061% | -0.080% |
+| strong_momentum | trend: bullish | 74 | 0.079% | -0.062% |
+| strong_momentum | trend: bearish | 16 | 0.305% | 0.164% |
+| strong_momentum | trend: neutral/range | 125 | 0.111% | -0.031% |
+| strong_momentum | vol: low | 60 | 0.301% | 0.160% |
+| strong_momentum | vol: mid | 63 | -0.067% | -0.209% |
+| strong_momentum | vol: high | 92 | 0.117% | -0.025% |
+| overheated_market | trend: bullish | 13 | 0.340% | 0.242% |
+| overheated_market | trend: bearish | 1 | 0.171% | 0.072% |
+| overheated_market | trend: neutral/range | 16 | -0.038% | -0.136% |
+| overheated_market | vol: low | 9 | 0.207% | 0.108% |
+| overheated_market | vol: mid | 5 | 0.028% | -0.071% |
+| overheated_market | vol: high | 16 | 0.124% | 0.026% |
 
 ## Price(1h) x OI(1h) quadrants — raw forward returns, NOT direction-adjusted (decision range)
 dead-band: |price 1h| > 0.3% and |OI 1h| > 0.3%
 | quadrant | n steps | fwd 1h mean | fwd 1h %up | fwd 4h mean | fwd 4h %up | fwd 24h mean | fwd 24h %up |
 |---|---|---|---|---|---|---|---|
-| price up + OI up | 13164 | -0.011% | 47.3% | 0.002% | 48.3% | 0.175% | 50.5% |
-| price up + OI down | 11566 | 0.033% | 48.8% | 0.064% | 51.4% | 0.272% | 52.6% |
-| price down + OI up | 10771 | -0.008% | 52.5% | 0.044% | 54.0% | 0.236% | 54.4% |
-| price down + OI down | 12266 | 0.025% | 55.4% | 0.029% | 55.1% | 0.356% | 56.7% |
-| all steps (baseline) | 252230 | 0.007% | 50.8% | 0.029% | 51.8% | 0.170% | 52.9% |
+| price up + OI up | 15946 | -0.006% | 47.5% | 0.016% | 48.6% | 0.152% | 50.6% |
+| price up + OI down | 14009 | 0.024% | 48.1% | 0.054% | 50.6% | 0.253% | 52.7% |
+| price down + OI up | 13206 | -0.007% | 52.1% | 0.043% | 53.7% | 0.161% | 53.3% |
+| price down + OI down | 15127 | 0.028% | 55.1% | 0.041% | 55.3% | 0.275% | 54.8% |
+| all steps (baseline) | 315359 | 0.005% | 50.6% | 0.022% | 51.4% | 0.130% | 52.6% |
 
 ## Funding-rate buckets (last settled rate) — raw forward returns (decision range)
 | funding bucket | share of steps | fwd 4h mean | fwd 4h %up | fwd 24h mean | fwd 24h %up |
 |---|---|---|---|---|---|
-| < 0 | 11.0% | 0.058% | 51.1% | 0.435% | 53.3% |
-| 0 to <0.005% | 27.3% | 0.049% | 52.2% | 0.143% | 53.3% |
-| 0.005% to <0.01% | 20.9% | -0.011% | 51.6% | 0.038% | 51.2% |
-| == 0.01% (Binance default clamp) | 30.4% | 0.024% | 51.7% | 0.129% | 53.8% |
-| >0.01% to 0.02% | 4.2% | 0.046% | 52.3% | 0.446% | 54.7% |
-| > 0.02% | 6.2% | 0.031% | 53.0% | 0.273% | 51.0% |
+| < 0 | 15.0% | 0.052% | 50.8% | 0.331% | 52.7% |
+| 0 to <0.005% | 29.3% | 0.023% | 51.1% | 0.088% | 52.8% |
+| 0.005% to <0.01% | 21.7% | -0.006% | 51.5% | -0.033% | 50.7% |
+| == 0.01% (Binance default clamp) | 25.7% | 0.022% | 51.7% | 0.130% | 53.8% |
+| >0.01% to 0.02% | 3.3% | 0.046% | 52.3% | 0.446% | 54.7% |
+| > 0.02% | 5.0% | 0.031% | 53.0% | 0.273% | 51.0% |

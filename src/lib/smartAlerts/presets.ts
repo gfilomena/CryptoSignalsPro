@@ -1,5 +1,6 @@
 import type { AlertCategory, AlertCondition, AlertMode, LogicalOperator, SessionDuration, SmartAlert } from '../../types/smartAlert'
 import { computeExpiresAt } from './conditionEngine'
+import { UNAVAILABLE_METRICS } from './metricDefs'
 
 export type PresetId = 'reversal_watch' | 'overheated_market' | 'long_squeeze_watch' | 'short_squeeze_watch' | 'strong_momentum'
 
@@ -85,6 +86,13 @@ export const PRESET_DEFINITIONS: PresetDefinition[] = [
     ],
   },
 ]
+
+/** Presets whose conditions need a metric with no data source (liquidations, see marketData.ts) can never
+ * fire — an AND with an unavailable condition fails closed. They stay defined (so stored alerts and future
+ * feeds keep working) but are not offered in the UI. Replay: 0 fires in 315,360 five-minute steps. */
+export const AVAILABLE_PRESETS: PresetDefinition[] = PRESET_DEFINITIONS.filter(
+  (p) => !p.conditions.some((c) => UNAVAILABLE_METRICS.includes(c.metric)),
+)
 
 export function getPreset(id: PresetId): PresetDefinition {
   const preset = PRESET_DEFINITIONS.find((p) => p.id === id)

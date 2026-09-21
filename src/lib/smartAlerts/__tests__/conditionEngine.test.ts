@@ -285,3 +285,30 @@ describe('processAlert — invalidation', () => {
     expect(processAlert(expired, notMatchingSnapshot, 1_000_000).shouldInvalidate).toBe(false)
   })
 })
+
+describe('processAlert — invalidation requires a confirmed streak', () => {
+  const notMatching = emptySnapshot({ priceChangePct: 1 })
+  const make = (pendingMatchCount: number, confirmationCycles: number) =>
+    baseAlert({
+      lastTriggeredAt: 900_000, // fired at some point in the past
+      pendingMatchCount,
+      confirmationCycles,
+      operator: 'AND',
+      conditions: [newCondition({ metric: 'PRICE_CHANGE', operator: '<=', threshold: -0.5 })],
+    })
+
+  it('does NOT invalidate an unconfirmed blip (1 match of 2 required) — the user was never notified about it', () => {
+    const r = processAlert(make(1, 2), notMatching, 1_000_000)
+    expect(r.shouldInvalidate).toBe(false)
+    expect(r.nextPendingMatchCount).toBe(0)
+  })
+
+  it('invalidates once the streak had reached the required confirmation', () => {
+    expect(processAlert(make(2, 2), notMatching, 1_000_000).shouldInvalidate).toBe(true)
+    expect(processAlert(make(5, 2), notMatching, 1_000_000).shouldInvalidate).toBe(true)
+  })
+
+  it('keeps the original single-cycle behaviour (confirmationCycles = 1)', () => {
+    expect(processAlert(make(1, 1), notMatching, 1_000_000).shouldInvalidate).toBe(true)
+  })
+})

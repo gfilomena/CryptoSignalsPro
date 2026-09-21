@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n/useI18n'
-import { PRESET_DEFINITIONS, type PresetId } from '../../lib/smartAlerts/presets'
+import { AVAILABLE_PRESETS, type PresetId } from '../../lib/smartAlerts/presets'
 
 interface Props {
   onUsePreset: (presetId: PresetId) => void
@@ -14,7 +14,7 @@ export function PresetGrid({ onUsePreset }: Props) {
         {t('smartAlerts.preset.editableHint')}
       </p>
       <div className="sa-preset-grid">
-        {PRESET_DEFINITIONS.map((preset) => (
+        {AVAILABLE_PRESETS.map((preset) => (
           <div className="sa-preset-card" key={preset.id}>
             <h4>{t(`smartAlerts.preset.${preset.id}.name`)}</h4>
             <p>{t(`smartAlerts.preset.${preset.id}.description`)}</p>

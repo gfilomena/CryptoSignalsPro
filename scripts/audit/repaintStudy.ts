@@ -4,7 +4,8 @@
 // The backtest (runBacktest / replayScalp) only ever evaluates CLOSED 15m candles. This script replays the
 // live behaviour minute by minute from 1-minute data — each timeframe's last candle is assembled from the
 // 1m bars seen so far (no future information) — and compares it with the closed-candle replay.
-//   npx tsx scripts/audit/repaintStudy.ts [--from=2025-09] [--to=2025-12]
+//   npx tsx scripts/audit/repaintStudy.ts [--from=2025-09] [--to=2025-12] [--mode=forming|closed]
+//   forming = BEFORE the fix (engine fed the forming candle);  closed = AFTER (closed candles only, 1m price used only for SL/TP)
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { klines, months, CACHE } from './download'
 import { loadDataset, mean, num, pct } from './lib'
@@ -21,6 +22,7 @@ import { closePaperTrade, openPaperTrade } from '../../src/lib/scalp/paperTradin
 const arg = (n: string, d: string) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split('=')[1] ?? d
 const FROM = arg('from', '2025-09')
 const TO = arg('to', '2025-12')
+const MODE = arg('mode', 'forming') as 'forming' | 'closed'
 const MIN = 60_000
 const toC = (k: { t: number; o: number; h: number; l: number; c: number; v: number; ct: number }): Candle => ({ openTime: k.t, open: k.o, high: k.h, low: k.l, close: k.c, volume: k.v, closeTime: k.ct })
 
@@ -50,7 +52,8 @@ async function main() {
   }
   const withForming = (map: Map<number, number>, arr: Candle[], n: number, f: Candle): Candle[] | null => {
     const idx = map.get(f.openTime)
-    return idx === undefined || idx < n ? null : [...arr.slice(idx - (n - 1), idx), f]
+    if (idx === undefined || idx < n) return null
+    return MODE === 'closed' ? arr.slice(idx - n, idx) : [...arr.slice(idx - (n - 1), idx), f]
   }
 
   // ---- live-like minute-by-minute replay -------------------------------------------------------
@@ -118,7 +121,7 @@ async function main() {
   }
   const days = (end - start) / 86_400_000
   const out = {
-    period: `${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}`, days,
+    mode: MODE, period: `${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}`, days,
     live: { ...cnt, trades: liveTrades.length, meanNetR: mean(liveTrades), totalNetR: liveTrades.reduce((a, b) => a + b, 0) },
     closed: {
       ENTRY_CONFIRMED: cEntries.length, trades: cTrades.length, meanNetR: mean(cTrades.map((t) => t.pnlRNet)), totalNetR: cTrades.reduce((a, t) => a + t.pnlRNet, 0),
@@ -129,6 +132,6 @@ async function main() {
   console.log(JSON.stringify(out, null, 1))
   console.log(`intrabar ENTRY_CONFIRMED still valid on the closed candle: ${survived}/${liveEntries.length} = ${pct(survived / Math.max(1, liveEntries.length), 1)}; live-like mean net R ${num(out.live.meanNetR)} vs closed-candle ${num(out.closed.meanNetR)}`)
   mkdirSync('docs/audit/data', { recursive: true })
-  writeFileSync('docs/audit/data/repaint_study.json', JSON.stringify(out, null, 1))
+  writeFileSync(`docs/audit/data/repaint_study_${MODE}_${FROM}_${TO}.json`, JSON.stringify(out, null, 1))
 }
 main().catch((e) => { console.error(e); process.exit(1) })

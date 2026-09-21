@@ -37,3 +37,8 @@ export function metricRequiresTimeframe(metric: AlertMetric): boolean {
 }
 
 export const METRIC_GROUPS: MetricGroup[] = ['PRICE', 'OPEN_INTEREST', 'FUNDING_RATE', 'VOLUME', 'RSI', 'LIQUIDATIONS']
+
+/** Metrics that are structurally always unavailable today (no data source wired up yet — Binance has no public
+ * aggregate-liquidation endpoint, see marketData.ts). Used by the UI to grey out those condition rows and to
+ * hide presets that could never fire, rather than silently letting users build an alert that never triggers. */
+export const UNAVAILABLE_METRICS: AlertMetric[] = ['LONG_LIQUIDATIONS', 'SHORT_LIQUIDATIONS', 'LIQUIDATION_SPIKE']

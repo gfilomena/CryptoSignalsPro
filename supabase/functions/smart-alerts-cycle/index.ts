@@ -303,7 +303,8 @@ Deno.serve(async () => {
       const shouldFire = confirmed && !inCooldown;
 
       const invalidationInCooldown = row.last_invalidated_at ? now - new Date(row.last_invalidated_at).getTime() < row.cooldown_ms : false;
-      const shouldInvalidate = !triggered && prevPending > 0 && Boolean(row.last_triggered_at) && !invalidationInCooldown;
+      // Only a streak that had reached confirmation can be invalidated (mirrors processAlert in conditionEngine.ts).
+      const shouldInvalidate = !triggered && prevPending >= requiredCycles && Boolean(row.last_triggered_at) && !invalidationInCooldown;
 
       // Persist the confirmation counter (and, when relevant, the trigger/invalidation timestamp)
       // in a single write per row per cycle.

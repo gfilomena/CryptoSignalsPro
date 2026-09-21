@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createAlertFromPreset, createCustomAlert, PRESET_DEFINITIONS } from '../presets'
+import { AVAILABLE_PRESETS, createAlertFromPreset, createCustomAlert, PRESET_DEFINITIONS } from '../presets'
+import { UNAVAILABLE_METRICS } from '../metricDefs'
 import { evaluateAlert } from '../conditionEngine'
 import { emptySnapshot } from './testUtils'
 
@@ -77,5 +78,19 @@ describe('createCustomAlert', () => {
     const alert = createCustomAlert('My alert', { symbol: 'ETH', mode: 'ALWAYS' })
     expect(alert.confirmationCycles).toBe(1)
     expect(alert.pendingMatchCount).toBe(0)
+  })
+})
+
+describe('AVAILABLE_PRESETS', () => {
+  it('excludes the liquidation presets, which can never fire without a liquidation feed', () => {
+    const ids = AVAILABLE_PRESETS.map((p) => p.id)
+    expect(ids).not.toContain('long_squeeze_watch')
+    expect(ids).not.toContain('short_squeeze_watch')
+    expect(ids).toEqual(expect.arrayContaining(['reversal_watch', 'strong_momentum', 'overheated_market']))
+  })
+
+  it('never offers a preset that depends on an unavailable metric, and keeps the full definitions intact', () => {
+    for (const p of AVAILABLE_PRESETS) expect(p.conditions.some((c) => UNAVAILABLE_METRICS.includes(c.metric))).toBe(false)
+    expect(PRESET_DEFINITIONS.length).toBeGreaterThan(AVAILABLE_PRESETS.length)
   })
 })

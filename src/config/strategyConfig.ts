@@ -3,14 +3,17 @@ import type { AlertType } from '../types/scalpSignal'
 
 /** Alert types that trigger a push notification. SETUP_DETECTED is intentionally excluded — it's
  * recorded in the signal history for transparency but never worth interrupting the user for
- * (prudent mode: only real trade-affecting events push). */
+ * (prudent mode: only real trade-affecting events push). SETUP_INVALIDATED is excluded for the same
+ * reason: it can only follow a SETUP_DETECTED, which is never pushed, so pushing it announced the end of
+ * a setup the user was never told about (535/535 in the 3-year replay, 83% of all scalp pushes; most are
+ * just the setup's 8-bar lookback window rolling over) — see docs/audit/REMOVED_SIGNALS.md. It is still
+ * recorded in the signal history. */
 export const PUSH_ALERT_TYPES: AlertType[] = [
   'ENTRY_CONFIRMED',
   'EXIT_SUGGESTED',
   'STOP_HIT',
   'TP1_HIT',
   'TP2_HIT',
-  'SETUP_INVALIDATED',
 ]
 
 export interface ScalpSymbolDef {

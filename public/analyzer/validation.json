@@ -1,0 +1,344 @@
+{
+ "generatedAt": "2026-09-21T11:27:20.292Z",
+ "storeVersion": "738d62ce",
+ "tau0": 0.86,
+ "queryEvery": "6h",
+ "poolRule": "analogs only if T_analog + 24h <= T_query",
+ "splits": {
+  "train": [
+   1696089600000,
+   1750343040000
+  ],
+  "val": [
+   1750343040000,
+   1769281920000
+  ],
+  "oos": [
+   1769281920000,
+   1788220800000
+  ]
+ },
+ "featureCount": 22,
+ "oosValidity": 0.1757061596822419,
+ "oosValidityRule": "S_oos = min(1, -log10(p)/3), p = one-sided binomial test that OOS 1h directional accuracy of BULLISH/BEARISH calls beat the best constant guess; 0 if fewer than 30 directional calls",
+ "results": {
+  "train": {
+   "queries": 2366,
+   "nonInsufficient": 1802,
+   "coverage": 0.7616229923922232,
+   "horizons": {
+    "30m": {
+     "nUsable": 1802,
+     "nBullish": 328,
+     "nBearish": 356,
+     "nNeutral": 1118,
+     "realisedPositiveAfter": {
+      "bullish": 0.573170731707317,
+      "bearish": 0.46629213483146065,
+      "neutral": 0.5205724508050089,
+      "unconditional": 0.5194228634850167
+     },
+     "directional": {
+      "n": 684,
+      "hits": 378,
+      "accuracy": 0.5526315789473685,
+      "ci": [
+       0.5151776101306815,
+       0.5894976523134627
+      ],
+      "bestConstantGuess": 0.5194228634850167,
+      "pOneSided": 0.041074251628872904
+     },
+     "meanDirectionalReturn": 0.00013612037637827305,
+     "meanDirectionalReturnCI": [
+      -0.00006654110993052509,
+      0.00034770226475298605
+     ],
+     "brier": {
+      "analyzer": 0.2479563345236901,
+      "baseline": 0.24970708661765428,
+      "skill": 0.007011223100147346
+     }
+    },
+    "1h": {
+     "nUsable": 1802,
+     "nBullish": 328,
+     "nBearish": 356,
+     "nNeutral": 1118,
+     "realisedPositiveAfter": {
+      "bullish": 0.5213414634146342,
+      "bearish": 0.4438202247191011,
+      "neutral": 0.5259391771019678,
+      "unconditional": 0.5088790233074362
+     },
+     "directional": {
+      "n": 684,
+      "hits": 369,
+      "accuracy": 0.5394736842105263,
+      "ci": [
+       0.5020027482738483,
+       0.5765036985592598
+      ],
+      "bestConstantGuess": 0.5088790233074362,
+      "pOneSided": 0.05473711374924217
+     },
+     "meanDirectionalReturn": 0.00012582414829589425,
+     "meanDirectionalReturnCI": [
+      -0.00018329377815783633,
+      0.00041719708450132576
+     ],
+     "brier": {
+      "analyzer": 0.24847265598604482,
+      "baseline": 0.24982765329715662,
+      "skill": 0.0054237282911996365
+     }
+    },
+    "4h": {
+     "nUsable": 1802,
+     "nBullish": 328,
+     "nBearish": 356,
+     "nNeutral": 1118,
+     "realisedPositiveAfter": {
+      "bullish": 0.5335365853658537,
+      "bearish": 0.5,
+      "neutral": 0.5214669051878354,
+      "unconditional": 0.5194228634850167
+     },
+     "directional": {
+      "n": 684,
+      "hits": 353,
+      "accuracy": 0.5160818713450293,
+      "ci": [
+       0.4786448274331469,
+       0.5533392805358973
+      ],
+      "bestConstantGuess": 0.5194228634850167,
+      "pOneSided": 0.5694163987098442
+     },
+     "meanDirectionalReturn": -0.00004406908087138193,
+     "meanDirectionalReturnCI": [
+      -0.0007723340920350933,
+      0.0006408544672468757
+     ],
+     "brier": {
+      "analyzer": 0.2502375565802669,
+      "baseline": 0.2499560874203191,
+      "skill": -0.001126074435124691
+     }
+    }
+   }
+  },
+  "val": {
+   "queries": 876,
+   "nonInsufficient": 818,
+   "coverage": 0.9337899543378996,
+   "horizons": {
+    "30m": {
+     "nUsable": 818,
+     "nBullish": 210,
+     "nBearish": 231,
+     "nNeutral": 377,
+     "realisedPositiveAfter": {
+      "bullish": 0.5523809523809524,
+      "bearish": 0.47619047619047616,
+      "neutral": 0.4562334217506631,
+      "unconditional": 0.48655256723716384
+     },
+     "directional": {
+      "n": 441,
+      "hits": 237,
+      "accuracy": 0.5374149659863946,
+      "ci": [
+       0.4907562750034492,
+       0.5834274344337979
+      ],
+      "bestConstantGuess": 0.5134474327628362,
+      "pOneSided": 0.15696724108815086
+     },
+     "meanDirectionalReturn": 0.000007505015910914427,
+     "meanDirectionalReturnCI": [
+      -0.00020378701575776242,
+      0.0002158299007106261
+     ],
+     "brier": {
+      "analyzer": 0.25338445870265397,
+      "baseline": 0.25026116637025325,
+      "skill": -0.01248013176674756
+     }
+    },
+    "1h": {
+     "nUsable": 818,
+     "nBullish": 210,
+     "nBearish": 231,
+     "nNeutral": 377,
+     "realisedPositiveAfter": {
+      "bullish": 0.5285714285714286,
+      "bearish": 0.47619047619047616,
+      "neutral": 0.47480106100795755,
+      "unconditional": 0.4889975550122249
+     },
+     "directional": {
+      "n": 441,
+      "hits": 232,
+      "accuracy": 0.5260770975056689,
+      "ci": [
+       0.479449862924355,
+       0.572253934562211
+      ],
+      "bestConstantGuess": 0.511002444987775,
+      "pOneSided": 0.2632724914443646
+     },
+     "meanDirectionalReturn": -0.00009269439530383551,
+     "meanDirectionalReturnCI": [
+      -0.00042051562142243304,
+      0.00021995093113314867
+     ],
+     "brier": {
+      "analyzer": 0.25198803364414546,
+      "baseline": 0.25028619529076845,
+      "skill": -0.006799569394548177
+     }
+    },
+    "4h": {
+     "nUsable": 818,
+     "nBullish": 210,
+     "nBearish": 231,
+     "nNeutral": 377,
+     "realisedPositiveAfter": {
+      "bullish": 0.49047619047619045,
+      "bearish": 0.4805194805194805,
+      "neutral": 0.5092838196286472,
+      "unconditional": 0.4963325183374083
+     },
+     "directional": {
+      "n": 441,
+      "hits": 223,
+      "accuracy": 0.5056689342403629,
+      "ci": [
+       0.45915821294714576,
+       0.5520817430281947
+      ],
+      "bestConstantGuess": 0.5036674816625917,
+      "pOneSided": 0.4665029985321272
+     },
+     "meanDirectionalReturn": 0.0001973219013051027,
+     "meanDirectionalReturnCI": [
+      -0.0005264144766369211,
+      0.0010185640204278747
+     ],
+     "brier": {
+      "analyzer": 0.2510619890179214,
+      "baseline": 0.25053424088900883,
+      "skill": -0.0021064910211072707
+     }
+    }
+   }
+  },
+  "oos": {
+   "queries": 877,
+   "nonInsufficient": 787,
+   "coverage": 0.8973774230330672,
+   "horizons": {
+    "30m": {
+     "nUsable": 786,
+     "nBullish": 223,
+     "nBearish": 210,
+     "nNeutral": 353,
+     "realisedPositiveAfter": {
+      "bullish": 0.4798206278026906,
+      "bearish": 0.4714285714285714,
+      "neutral": 0.5014164305949008,
+      "unconditional": 0.4872773536895674
+     },
+     "directional": {
+      "n": 433,
+      "hits": 218,
+      "accuracy": 0.5034642032332564,
+      "ci": [
+       0.4565465982390343,
+       0.5503208795835907
+      ],
+      "bestConstantGuess": 0.5127226463104326,
+      "pOneSided": 0.6500428261601384
+     },
+     "meanDirectionalReturn": 0.00012490450633944225,
+     "meanDirectionalReturnCI": [
+      -0.0001410521510361278,
+      0.0003643951731298138
+     ],
+     "brier": {
+      "analyzer": 0.2533886987359896,
+      "baseline": 0.25019608553263784,
+      "skill": -0.012760444259370063
+     }
+    },
+    "1h": {
+     "nUsable": 786,
+     "nBullish": 223,
+     "nBearish": 210,
+     "nNeutral": 353,
+     "realisedPositiveAfter": {
+      "bullish": 0.5201793721973094,
+      "bearish": 0.4714285714285714,
+      "neutral": 0.5297450424929179,
+      "unconditional": 0.5114503816793893
+     },
+     "directional": {
+      "n": 433,
+      "hits": 227,
+      "accuracy": 0.5242494226327945,
+      "ci": [
+       0.47720260698967154,
+       0.5708697377687033
+      ],
+      "bestConstantGuess": 0.5114503816793893,
+      "pOneSided": 0.2970855447785188
+     },
+     "meanDirectionalReturn": -0.000051832825057454155,
+     "meanDirectionalReturnCI": [
+      -0.00047068604126960844,
+      0.0003242394956548788
+     ],
+     "brier": {
+      "analyzer": 0.24868049541115717,
+      "baseline": 0.24986251168779147,
+      "skill": 0.004730666752086665
+     }
+    },
+    "4h": {
+     "nUsable": 786,
+     "nBullish": 223,
+     "nBearish": 210,
+     "nNeutral": 353,
+     "realisedPositiveAfter": {
+      "bullish": 0.5336322869955157,
+      "bearish": 0.48095238095238096,
+      "neutral": 0.49291784702549574,
+      "unconditional": 0.5012722646310432
+     },
+     "directional": {
+      "n": 433,
+      "hits": 228,
+      "accuracy": 0.5265588914549654,
+      "ci": [
+       0.4795026872629681,
+       0.5731479760438233
+      ],
+      "bestConstantGuess": 0.5012722646310432,
+      "pOneSided": 0.14631617071592706
+     },
+     "meanDirectionalReturn": -0.0003227005761749598,
+     "meanDirectionalReturnCI": [
+      -0.0013348446935828573,
+      0.0005187855262081528
+     ],
+     "brier": {
+      "analyzer": 0.25445536641127886,
+      "baseline": 0.2502458082861278,
+      "skill": -0.016821692854642745
+     }
+    }
+   }
+  }
+ }
+}

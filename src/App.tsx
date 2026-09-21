@@ -12,6 +12,7 @@ import { SentimentCard } from './components/SentimentCard'
 import { WhaleSection } from './components/WhaleSection'
 import { BacktestSection } from './components/BacktestSection'
 import { SignalCard } from './components/SignalCard'
+import { SetupAnalyzerPanel } from './components/SetupAnalyzer/SetupAnalyzerPanel'
 import { SmartAlertsSection } from './components/SmartAlerts'
 import { SetupPanel } from './components/SetupPanel'
 import { SignalHistoryPanel } from './components/SignalHistoryPanel'
@@ -127,6 +128,8 @@ function Main() {
         whaleContext={whaleMap[signalData?.snapshot?.symbol ?? 'BTC'] ?? null}
         openTrade={signalData?.paperTrades.find((t) => t.result === 'OPEN') ?? null}
       />
+
+      <SetupAnalyzerPanel engineSnapshot={signalData?.snapshot ?? null} />
 
       <div className="status-bar">
         <div className="status-item">

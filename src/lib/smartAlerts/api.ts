@@ -22,11 +22,11 @@ import {
   upsertLocalAlert,
 } from './alertStore'
 
-function restUrl(path: string): string {
+export function restUrl(path: string): string {
   return `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1${path}`
 }
 
-function restHeaders(extra: Record<string, string> = {}): HeadersInit {
+export function restHeaders(extra: Record<string, string> = {}): HeadersInit {
   return {
     apikey: SUPABASE_ANON_KEY,
     Authorization: `Bearer ${SUPABASE_ANON_KEY}`,

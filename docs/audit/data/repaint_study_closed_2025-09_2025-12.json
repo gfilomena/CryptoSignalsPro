@@ -1,0 +1,23 @@
+{
+ "mode": "closed",
+ "period": "2025-09-01 → 2026-01-01",
+ "days": 122,
+ "live": {
+  "SETUP_DETECTED": 53,
+  "ENTRY_CONFIRMED": 5,
+  "SETUP_INVALIDATED": 50,
+  "trades": 5,
+  "meanNetR": -0.040119793990297435,
+  "totalNetR": -0.20059896995148718
+ },
+ "closed": {
+  "ENTRY_CONFIRMED": 4,
+  "trades": 4,
+  "meanNetR": 0.5039085852722289,
+  "totalNetR": 2.0156343410889157,
+  "SETUP_DETECTED": 53,
+  "SETUP_INVALIDATED": 50
+ },
+ "liveEntriesSurvivingToClose": 1,
+ "liveEntries": 5
+}

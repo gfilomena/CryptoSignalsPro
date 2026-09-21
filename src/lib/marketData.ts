@@ -37,8 +37,10 @@ export async function fetchCryptoSnapshot(
       low24h = applyChfConversion(low24h, currency, chfRate)
       for (let i = 0; i < prices.length; i++) prices[i] = applyChfConversion(prices[i], currency, chfRate)
     }
-    prices.push(currentPrice)
-    volumes.push(volume24h)
+    // klines already ends with the still-forming 4h candle: refresh ITS close with the latest price instead of
+    // appending a second point (that double-counted the forming candle in RSI/MACD/EMA), and keep OBV on 4h
+    // volumes only — the 24h ticker volume used to be appended here, mixing units.
+    prices[prices.length - 1] = currentPrice
 
     const rsi = calculateRSI(prices)
     const macdData = calculateMACD(prices)

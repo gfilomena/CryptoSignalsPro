@@ -1,0 +1,23 @@
+{
+ "mode": "forming",
+ "period": "2026-03-01 → 2026-07-01",
+ "days": 122,
+ "live": {
+  "SETUP_DETECTED": 253,
+  "ENTRY_CONFIRMED": 13,
+  "SETUP_INVALIDATED": 240,
+  "trades": 13,
+  "meanNetR": -0.4145834290282529,
+  "totalNetR": -5.3895845773672875
+ },
+ "closed": {
+  "ENTRY_CONFIRMED": 6,
+  "trades": 6,
+  "meanNetR": -0.38825311662523876,
+  "totalNetR": -2.3295186997514326,
+  "SETUP_DETECTED": 69,
+  "SETUP_INVALIDATED": 63
+ },
+ "liveEntriesSurvivingToClose": 5,
+ "liveEntries": 13
+}

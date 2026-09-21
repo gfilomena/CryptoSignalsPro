@@ -77,6 +77,12 @@ function calculateATR(klines: number[][], period = 14): number {
 // ---------------------------------------------------------------------------
 interface Candle { openTime: number; open: number; high: number; low: number; close: number; volume: number; closeTime: number }
 
+/** Signals use CLOSED candles only (mirrors closedCandles in src/lib/scalp/klines.ts): Binance returns the
+ * still-forming candle last, and evaluating it made live signals repaint (see docs/audit). */
+function closedCandles(candles: Candle[], now = Date.now()): Candle[] {
+  return candles.filter((c) => c.closeTime < now);
+}
+
 async function fetchCandles(pair: string, interval: string, limit: number): Promise<Candle[]> {
   const url = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${interval}&limit=${limit}`;
   const res = await fetch(url);
@@ -107,7 +113,8 @@ interface StrategyConfig {
   tradingCosts: { feePct: number; spreadPct: number; slippagePct: number };
 }
 
-const PUSH_ALERT_TYPES = ["ENTRY_CONFIRMED", "EXIT_SUGGESTED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
+// SETUP_INVALIDATED is intentionally not pushed: it only follows SETUP_DETECTED (never pushed) — see docs/audit/REMOVED_SIGNALS.md.
+const PUSH_ALERT_TYPES = ["ENTRY_CONFIRMED", "EXIT_SUGGESTED", "STOP_HIT", "TP1_HIT", "TP2_HIT"];
 
 // ---------------------------------------------------------------------------
 // Market regime with swing structure (ported from src/lib/scalp/regime.ts)
@@ -643,11 +650,15 @@ Deno.serve(async () => {
     const results: Record<string, unknown> = {};
 
     for (const symbolDef of enabledSymbols) {
-      const [trendCandles, structureCandles, entryCandles] = await Promise.all([
+      const [trendRaw, structureRaw, entryRaw] = await Promise.all([
         fetchCandles(symbolDef.pair, config.trendTimeframe, 300),
         fetchCandles(symbolDef.pair, config.structureTimeframe, 220),
         fetchCandles(symbolDef.pair, config.entryTimeframe, 150),
       ]);
+      const fetchedAt = Date.now();
+      const trendCandles = closedCandles(trendRaw, fetchedAt);
+      const structureCandles = closedCandles(structureRaw, fetchedAt);
+      const entryCandles = closedCandles(entryRaw, fetchedAt);
 
       const { setup, regime, regimeDetail, zones, reasons } = evaluateSetup(symbolDef.symbol, trendCandles, structureCandles, entryCandles, config);
 
@@ -658,7 +669,8 @@ Deno.serve(async () => {
 
       const dailyRisk = updateDailyRisk(prevDailyRisk, config, {});
       const usdRate = await getUsdRate(config.capitalCurrency);
-      const currentPrice = entryCandles[entryCandles.length - 1]?.close ?? 0;
+      // latest traded price (forming candle) — used only to monitor an open trade's stop/targets
+      const currentPrice = entryRaw[entryRaw.length - 1]?.close ?? 0;
 
       const risk = setup ? calculateRisk(setup, zones, config, dailyRisk, usdRate) : null;
       const confidence = setup && risk ? calculateConfidenceScore(setup, regimeDetail, risk, config) : null;

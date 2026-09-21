@@ -10,7 +10,7 @@
 // SHORT_LIQUIDATIONS / LIQUIDATION_SPIKE are therefore always reported as unavailable (`null`)
 // until a dedicated ingestion service is built — see the final report for details. Conditions
 // referencing them are never silently treated as matched; see conditionEngine.ts.
-import type { AlertMetric, MetricSnapshot, MetricTimeframe } from '../../types/smartAlert'
+import type { MetricSnapshot, MetricTimeframe } from '../../types/smartAlert'
 import { METRIC_TIMEFRAMES } from '../../types/smartAlert'
 import { calculateRSI } from '../indicators'
 import type { Candle } from '../../types/scalpSignal'
@@ -164,7 +164,4 @@ export async function fetchSmartAlertSnapshot(symbol: string, timeframes: Metric
   }
 }
 
-/** Metrics that are structurally always unavailable today (no data source wired up yet). Used by
- * the UI to grey out / label those condition rows rather than silently letting users build an
- * alert that can never fire. */
-export const UNAVAILABLE_METRICS: AlertMetric[] = ['LONG_LIQUIDATIONS', 'SHORT_LIQUIDATIONS', 'LIQUIDATION_SPIKE']
+export { UNAVAILABLE_METRICS } from './metricDefs'

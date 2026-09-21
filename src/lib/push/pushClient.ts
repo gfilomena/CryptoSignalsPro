@@ -11,7 +11,6 @@ export const ALL_ALERT_TYPES: AlertType[] = [
   'STOP_HIT',
   'TP1_HIT',
   'TP2_HIT',
-  'SETUP_INVALIDATED',
 ]
 
 export interface PushStatus {

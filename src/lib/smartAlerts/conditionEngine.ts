@@ -150,11 +150,15 @@ export function processAlert(alert: SmartAlert, snapshot: MetricSnapshot, now: n
 
   const shouldFire = alert.enabled && !expired && confirmed && !inCooldown
 
+  // Only a streak that had itself reached confirmation can be "invalidated". Previously any pending count > 0
+  // qualified, so with confirmationCycles >= 2 (the preset default) an unconfirmed one-cycle blip that ended
+  // announced the end of a call the user was never notified about, as long as the alert had fired at some
+  // point in the past (replay: 32 of 174 strong_momentum invalidation pushes at 2 cycles, 146 of 172 at 3).
   const shouldInvalidate =
     alert.enabled &&
     !expired &&
     !evaluation.triggered &&
-    prevPendingMatchCount > 0 &&
+    prevPendingMatchCount >= requiredCycles &&
     Boolean(alert.lastTriggeredAt) &&
     !isInvalidationCooldown(alert, now)
 

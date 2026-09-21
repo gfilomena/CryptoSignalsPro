@@ -30,7 +30,7 @@ Deno.serve(async (req: Request) => {
       // signal-cycle). Still selectable/visible in the Signal History, just not push-worthy.
       const alertTypes = Array.isArray(body.alertTypes) && body.alertTypes.length > 0
         ? body.alertTypes
-        : ["ENTRY_CONFIRMED", "EXIT_SUGGESTED", "STOP_HIT", "TP1_HIT", "TP2_HIT", "SETUP_INVALIDATED"];
+        : ["ENTRY_CONFIRMED", "EXIT_SUGGESTED", "STOP_HIT", "TP1_HIT", "TP2_HIT"];
       // Smart Alerts push is a separate opt-in (defaults on) from the scalp engine's alert_types.
       const smartAlertsEnabled = typeof body.smartAlertsEnabled === "boolean" ? body.smartAlertsEnabled : true;
 

@@ -16,3 +16,14 @@ export async function fetchCandles(pair: string, interval: string, limit: number
     closeTime: Number(k[6]),
   }))
 }
+
+/**
+ * Binance returns the still-forming candle as the LAST element of every klines response. Signals are
+ * generated on CLOSED candles only — that is what the backtest replays and what was validated. Feeding
+ * the engine the forming candle made live setups/entries "repaint": in a 4-month live-like replay only
+ * 36-38% of intrabar ENTRY_CONFIRMED were still valid at the candle close (see docs/audit).
+ * `closeTime` is the scheduled end of the candle, so closed <=> closeTime < now.
+ */
+export function closedCandles(candles: Candle[], now = Date.now()): Candle[] {
+  return candles.filter((c) => c.closeTime < now)
+}

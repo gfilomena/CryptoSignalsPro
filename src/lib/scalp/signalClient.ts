@@ -7,7 +7,7 @@ import type {
   PaperTrade,
   SignalSnapshot,
 } from '../../types/scalpSignal'
-import { fetchCandles } from './klines'
+import { closedCandles, fetchCandles } from './klines'
 import { getUsdRate } from './fxRate'
 import { evaluateSetup } from './strategyEngine'
 import { calculateRisk, initialDailyRisk, updateDailyRisk } from './riskEngine'
@@ -78,11 +78,17 @@ function saveLocalStore(symbol: string, store: LocalSignalStore): void {
  * shows a live Current Signal), or as an offline-safe local mirror.
  */
 async function evaluateSymbolLocally(symbolDef: ScalpSymbolDef, config: StrategyConfig): Promise<SignalDataResult> {
-  const [trendCandles, structureCandles, entryCandles] = await Promise.all([
+  const [trendRaw, structureRaw, entryRaw] = await Promise.all([
     fetchCandles(symbolDef.pair, config.trendTimeframe, 300),
     fetchCandles(symbolDef.pair, config.structureTimeframe, 220),
     fetchCandles(symbolDef.pair, config.entryTimeframe, 150),
   ])
+  // Signals use closed candles only (see closedCandles); the forming candle's last price is kept
+  // solely to monitor an open trade's stop/targets in real time.
+  const fetchedAt = Date.now()
+  const trendCandles = closedCandles(trendRaw, fetchedAt)
+  const structureCandles = closedCandles(structureRaw, fetchedAt)
+  const entryCandles = closedCandles(entryRaw, fetchedAt)
 
   const { setup, regime, regimeDetail, zones, reasons } = evaluateSetup({
     symbol: symbolDef.symbol,
@@ -96,7 +102,7 @@ async function evaluateSymbolLocally(symbolDef: ScalpSymbolDef, config: Strategy
   const now = Date.now()
   const dailyRisk = updateDailyRisk(store.dailyRisk, config, {})
   const usdRate = await getUsdRate(config.capitalCurrency)
-  const currentPrice = entryCandles[entryCandles.length - 1]?.close ?? 0
+  const currentPrice = entryRaw[entryRaw.length - 1]?.close ?? 0
 
   const risk = setup ? calculateRisk(setup, zones, config, dailyRisk, usdRate) : null
   const confidence = setup && risk ? calculateConfidenceScore(setup, regimeDetail, risk, config) : null

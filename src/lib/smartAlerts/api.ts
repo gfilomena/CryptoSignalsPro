@@ -14,13 +14,13 @@ import {
   expireLocalSessions,
   listLocalAlerts,
   listLocalHistory,
+  listSyncedIds,
+  markSynced,
+  unmarkSynced,
   markLocalHistoryRead,
   setLocalAlertEnabled,
   upsertLocalAlert,
 } from './alertStore'
-
-/** Local-only alerts younger than this are assumed to still be syncing rather than deleted elsewhere. */
-const LOCAL_ONLY_GRACE_MS = 2 * 60_000
 
 function restUrl(path: string): string {
   return `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1${path}`
@@ -106,27 +106,42 @@ export async function listAlerts(now = Date.now()): Promise<SmartAlert[]> {
     if (!res.ok) return local
     const rows = (await res.json()) as SmartAlertRow[]
     const alerts = rows.map(fromRow)
-    // The server is the source of truth: drop local copies it no longer has (deleted elsewhere), so
-    // stale alerts never resurface. Alerts created moments ago may not have synced yet — keep those.
+    // The server is the source of truth for alerts it has confirmed: a synced alert that is now
+    // missing was deleted elsewhere, so drop it. A local alert the server never confirmed (its
+    // upsert failed) must NOT be dropped — that is how the essential alerts used to vanish — so
+    // retry pushing it instead.
     const serverIds = new Set(alerts.map((a) => a.id))
-    for (const stale of listLocalAlerts()) {
-      if (!serverIds.has(stale.id) && now - stale.createdAt > LOCAL_ONLY_GRACE_MS) deleteLocalAlert(stale.id)
+    const synced = listSyncedIds()
+    const unsynced: SmartAlert[] = []
+    for (const local of listLocalAlerts()) {
+      if (serverIds.has(local.id)) continue
+      if (synced.has(local.id)) {
+        deleteLocalAlert(local.id)
+        unmarkSynced(local.id)
+      } else {
+        unsynced.push(local)
+      }
     }
     for (const alert of alerts) upsertLocalAlert(alert)
+    markSynced(alerts.map((a) => a.id))
+    await Promise.all(unsynced.map(pushAlertToServer))
     return expireLocalSessions(now)
   } catch {
     return local
   }
 }
 
+/** Best-effort upsert; marks the alert as server-confirmed only on a 2xx, so a failed sync is retried
+ * by the next listAlerts instead of being mistaken for a deletion. */
 async function pushAlertToServer(alert: SmartAlert): Promise<void> {
   if (!hasSupabaseConfig) return
   try {
-    await fetch(restUrl('/smart_alerts?on_conflict=id'), {
+    const res = await fetch(restUrl('/smart_alerts?on_conflict=id'), {
       method: 'POST',
       headers: restHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
       body: JSON.stringify(toRow(alert)),
     })
+    if (res.ok) markSynced([alert.id])
   } catch {
     /* best-effort only — local store already has it */
   }
@@ -140,6 +155,7 @@ export async function saveAlert(alert: SmartAlert): Promise<SmartAlert[]> {
 
 export async function removeAlert(id: string): Promise<SmartAlert[]> {
   const alerts = deleteLocalAlert(id)
+  unmarkSynced(id)
   if (hasSupabaseConfig) {
     try {
       await fetch(restUrl(`/smart_alerts?id=eq.${id}`), { method: 'DELETE', headers: restHeaders() })

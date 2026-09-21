@@ -63,17 +63,37 @@ describe('api.ts local fallback (Supabase not configured)', () => {
 })
 
 describe('api.ts with Supabase configured', () => {
-  it('server is the source of truth: drops old local-only alerts, keeps ones created moments ago', async () => {
+  async function load(fetchImpl: (url: string, init?: RequestInit) => Promise<unknown>) {
     vi.resetModules()
     vi.doMock('../../../config/env', () => ({ SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'k', hasSupabaseConfig: true }))
-    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })))
-    const api = await import('../api')
-    const store = await import('../alertStore')
-    const now = 10_000_000
-    store.upsertLocalAlert(baseAlert({ id: 'ghost', createdAt: now - 10 * 60_000 }))
-    store.upsertLocalAlert(baseAlert({ id: 'fresh', createdAt: now - 5_000 }))
-    const ids = (await api.listAlerts(now)).map((a) => a.id)
-    expect(ids).toEqual(['fresh'])
-    vi.doUnmock('../../../config/env')
+    const fetchMock = vi.fn(fetchImpl)
+    vi.stubGlobal('fetch', fetchMock)
+    return { api: await import('../api'), store: await import('../alertStore'), fetchMock }
+  }
+
+  afterEach(() => vi.doUnmock('../../../config/env'))
+
+  it('drops a local alert the server used to have (deleted elsewhere)', async () => {
+    const { api, store } = await load(async () => ({ ok: true, json: async () => [] }))
+    store.upsertLocalAlert(baseAlert({ id: 'ghost' }))
+    store.markSynced(['ghost'])
+    expect(await api.listAlerts()).toEqual([])
+  })
+
+  it('keeps a never-synced local alert and retries pushing it (essential alerts must not vanish)', async () => {
+    const { api, store, fetchMock } = await load(async (_url, init) =>
+      init?.method === 'POST' ? { ok: true } : { ok: true, json: async () => [] },
+    )
+    store.upsertLocalAlert(baseAlert({ id: 'essential', createdAt: 0 }))
+    const ids = (await api.listAlerts(10_000_000)).map((a) => a.id)
+    expect(ids).toEqual(['essential'])
+    expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'POST')).toBe(true)
+    expect(store.listSyncedIds().has('essential')).toBe(true)
+  })
+
+  it('does not mark an alert synced when the upsert is rejected', async () => {
+    const { api, store } = await load(async () => ({ ok: false, status: 401 }))
+    await api.saveAlert(baseAlert({ id: 'a1' }))
+    expect(store.listSyncedIds().has('a1')).toBe(false)
   })
 })

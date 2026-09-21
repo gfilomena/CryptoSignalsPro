@@ -34,17 +34,16 @@ describe('buildPushPayload', () => {
 })
 
 describe('directionLabel', () => {
-  it('maps preset categories to a colour + bias hint (never an imperative buy/sell), everything else neutral', () => {
-    expect(directionLabel('REVERSAL_WATCH')).toBe('🟢 Bias rialzista')
-    expect(directionLabel('MARKET_STRENGTH')).toBe('🟢 Bias rialzista')
-    expect(directionLabel('OVERHEATED_MARKET')).toBe('🔴 Bias ribassista')
-    expect(directionLabel('LIQUIDATION')).toBe('⚪ Neutro')
-    expect(directionLabel('CUSTOM')).toBe('⚪ Neutro')
+  it('never implies a direction for any category (replay found no directional edge)', () => {
+    for (const c of ['REVERSAL_WATCH', 'MARKET_STRENGTH', 'OVERHEATED_MARKET', 'LIQUIDATION', 'CUSTOM'] as const) {
+      expect(directionLabel(c)).toBe('⚪ Condizioni rilevate')
+    }
   })
 
   it('puts the label first in the title and a disclaimer last in the body', () => {
     const payload = buildPushPayload(baseAlert({ category: 'OVERHEATED_MARKET', name: 'Overheated Market' }), emptySnapshot({ price: 100 }), 'x')
-    expect(payload.title.startsWith('🔴 Bias ribassista · BTC/USDT')).toBe(true)
+    expect(payload.title.startsWith('⚪ Condizioni rilevate · BTC/USDT')).toBe(true)
+    expect(payload.title).not.toMatch(/Bias|🟢|🔴/)
     expect(payload.body.endsWith(PUSH_DISCLAIMER)).toBe(true)
   })
 })

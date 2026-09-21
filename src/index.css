@@ -2030,3 +2030,4 @@
         .msa-hist-row { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.78rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
         .msa-counts { font-size: 0.8rem; margin: 6px 0; }
         @media (max-width: 640px) { .msa { padding: 12px; } .msa-table { display: block; overflow-x: auto; } }
+        .msa-why { background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.35); border-radius: 8px; padding: 10px 12px; font-size: 0.82rem; line-height: 1.5; margin: 8px 0; }

@@ -730,6 +730,7 @@ export const it: MessageTree = {
       "BULLISH": "rialzista",
       "BEARISH": "ribassista"
     },
+    "insufficientWhy": "Solo {{n}} stati storici rientrano nella soglia di similarità (distanza minima {{d}}, soglia τ = {{tau}}), quindi non viene riportata nessuna frequenza. Il mercato di oggi è in una configurazione rara — più insolito: {{list}}. Non è un errore: riprova quando le condizioni si normalizzano, oppure usa “Tutto lo storico” (le finestre corte hanno ancora meno analoghi).",
     "weakEvidence": "EVIDENZA STORICA DEBOLE",
     "comparable": "Osservazioni comparabili: N = {{n}} effettive (1h), {{raw}} grezze entro la soglia, {{cand}} stati candidati",
     "period": "Periodo usato: {{from}} → {{to}}",

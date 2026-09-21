@@ -181,6 +181,20 @@ function ResultView({ result, snapshot, record, meta, validation }: { result: An
       </div>
 
       <p className="msa-interp">{t(`analyzer.interp.${interp}`, { dir: directional ? t(`analyzer.dir.${result.bias}`) : '' })}{weak && ` · ${t('analyzer.weakEvidence')}`}</p>
+      {insufficient && (
+        <div className="msa-why">
+          {t('analyzer.insufficientWhy', {
+            n: result.nAnalogs,
+            d: num(result.distance.min, 2),
+            tau: result.tau.toFixed(2),
+            list: [...(result.groups ?? [])]
+              .sort((a, b) => Math.abs(b.currentZ) - Math.abs(a.currentZ))
+              .slice(0, 3)
+              .map((g) => `${t(`analyzer.groups.${g.group}`)} (${g.currentZ >= 0 ? '+' : ''}${g.currentZ.toFixed(1)}σ)`)
+              .join(', '),
+          })}
+        </div>
+      )}
       <div className="msa-meta">
         <span>{t('analyzer.comparable', { n: result.horizons.find((h) => h.horizon === '1h')?.nEff ?? 0, raw: result.nAnalogs, cand: result.nCandidates })}</span>
         <span className={`msa-sample ${h1.sample}`}>{t(`analyzer.sample.${h1.sample}`)}</span>

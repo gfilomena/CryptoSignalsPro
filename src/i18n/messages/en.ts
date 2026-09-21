@@ -714,6 +714,7 @@ export const en: MessageTree = {
       "BULLISH": "bullish",
       "BEARISH": "bearish"
     },
+    "insufficientWhy": "Only {{n}} historical states are within the similarity threshold (nearest distance {{d}}, threshold τ = {{tau}}), so no frequency is reported. Today's market is in a rare configuration — most unusual: {{list}}. This is not an error: try again when conditions normalise, or use “Whole history” (short windows have even fewer analogs).",
     "weakEvidence": "WEAK HISTORICAL EVIDENCE",
     "comparable": "Comparable observations: N = {{n}} effective (1h), {{raw}} raw within the threshold, {{cand}} candidate states",
     "period": "Period used: {{from}} → {{to}}",

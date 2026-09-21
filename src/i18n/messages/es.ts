@@ -713,6 +713,7 @@ export const es: MessageTree = {
       "BULLISH": "alcista",
       "BEARISH": "bajista"
     },
+    "insufficientWhy": "Solo {{n}} estados históricos están dentro del umbral de similitud (distancia mínima {{d}}, umbral τ = {{tau}}), por lo que no se informa ninguna frecuencia. El mercado de hoy está en una configuración rara — más inusual: {{list}}. No es un error: vuelve a intentarlo cuando las condiciones se normalicen, o usa “Todo el historial” (las ventanas cortas tienen aún menos análogos).",
     "weakEvidence": "EVIDENCIA HISTÓRICA DÉBIL",
     "comparable": "Observaciones comparables: N = {{n}} efectivas (1h), {{raw}} brutas dentro del umbral, {{cand}} estados candidatos",
     "period": "Periodo usado: {{from}} → {{to}}",
